@@ -14,6 +14,6 @@ frontend = (head', body)
   where
     head' = el "title" $ text "Obelisk Minimal Example"
     body = do
-      text "Welcome to Obelisk!"
+      text "asss"
       el "p" $ text $ T.pack commonStuff
       elAttr "img" ("src" =: static @"obelisk.jpg") blank

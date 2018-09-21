@@ -5,10 +5,17 @@ build-type: Simple
 
 library
   hs-source-dirs: src
-  build-depends: base
+  build-depends:
+      base
+    , dependent-map
+    , dependent-sum
+    , lens
+    , nat
+    , text
 
   exposed-modules:
     Common.Api
+    Common.CharacterSheet
     Common.DiceSet
 
 test-suite tests
@@ -17,10 +24,17 @@ test-suite tests
   type:
     exitcode-stdio-1.0
   hs-source-dirs:
-    tests
+      src
+    , tests
   main-is:
     test.hs
   build-depends:
       base
+    , dependent-map
+    , dependent-sum
+    , lens
+    , nat
     , tasty
+    , tasty-hunit
+    , text
     , common

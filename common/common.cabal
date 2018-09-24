@@ -9,6 +9,7 @@ library
       base
     , dependent-map
     , dependent-sum
+    , dependent-sum-template
     , lens
     , nat
     , text
@@ -32,6 +33,7 @@ test-suite tests
       base
     , dependent-map
     , dependent-sum
+    , dependent-sum-template
     , lens
     , nat
     , tasty

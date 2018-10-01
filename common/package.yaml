@@ -1,0 +1,25 @@
+name: common
+version: "0.1"
+
+dependencies:
+  - base
+  - lens
+  - text
+  - nat
+
+library:
+  source-dirs: src
+  exposed-modules:
+    - Common.Api
+    - Common.DiceSet
+
+tests:
+  tests:
+    main: Main.hs
+    source-dirs:
+      - src
+      - tests
+    dependencies:
+      - tasty
+      - tasty-discover
+      - tasty-hunit

@@ -1,51 +1,21 @@
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE RankNTypes        #-}
 
 module Common.CharacterSheet where
 
 import           Control.Lens          (from, to, (^.))
 import           Control.Lens.TH       (makeLenses)
-import           Data.Dependent.Map    (DMap)
-import qualified Data.Dependent.Map    as DMap
-import           Data.Dependent.Sum    ((==>))
-import           Data.Functor.Identity (Identity)
-import           Data.GADT.Compare.TH  (deriveGCompare, deriveGEq, runGComparing)
+import           Data.Number.Nat1      (Nat1)
 
-import qualified Data.GADT.Compare
-import qualified Data.Type.Equality
+data Traits = Traits deriving (Eq, Show)
 
-type ConcentrationMap k f = DMap k f
-
-data DeftnessAptitudes a where
-  Shootin :: DeftnessAptitudes ()
-
-deriveGEq      ''DeftnessAptitudes
-deriveGCompare ''DeftnessAptitudes
-
-data TraitTreeKey f a where
-  Deftness :: TraitTreeKey f (DMap DeftnessAptitudes f)
-
--- deriveGEq      ''(TraitTreeKey f)
-instance Data.GADT.Compare.GEq (TraitTreeKey f) where
-  geq Deftness Deftness
-    = do { return Data.Type.Equality.Refl }
-
--- deriveGCompare ''TraitTreeKey
-instance DMap.GCompare (TraitTreeKey f) where
-  gcompare Deftness Deftness = (Data.GADT.Compare.TH.runGComparing $ (do { return DMap.GEQ }))
-  gcompare (Deftness {}) _ = DMap.GLT
-  gcompare _ (Deftness {}) = DMap.GGT
+data EffectSet = EffectSet deriving (Eq, Show)
 
 data CharacterSheet = CharacterSheet
-  { _chSheetAptitudeTree :: DMap (TraitTreeKey Identity) Identity
-  }
-
-gabriella :: CharacterSheet
-gabriella = CharacterSheet
-  { _chSheetAptitudeTree = DMap.fromList
-    [ Deftness ==> DMap.fromList
-      [ Shootin ==> ()
-      ]]
-  }
+  { _chrSheetTraits      :: Traits
+  , _chrSheetEdget       :: EffectSet
+  , _chrSheetHinderances :: EffectSet
+  , _chrSheetBlessings   :: EffectSet
+  , _chrSheetKnacks      :: EffectSet
+  , _chrSheetSize        :: Nat1
+  , _chrLightArmor       :: Nat1
+  } deriving (Show, Eq)

@@ -2,18 +2,18 @@
 {-# LANGUAGE TemplateHaskell   #-}
 module Common.DiceSet where
 
-import Control.Lens ((^.), from, to)
-import Control.Lens.TH (makeLenses)
-import Data.Bool (bool)
-import Data.Foldable (fold)
-import Data.Maybe (isNothing)
-import Data.Number.Nat (Nat, fromNat)
-import Data.Number.Nat1 (Nat1)
-import Data.Semigroup ((<>))
-import Data.Text (Text)
-import Data.Text.Lens (_Text)
+import           Control.Lens
+import           Control.Lens.TH  (makeLenses)
+import           Data.Bool        (bool)
+import           Data.Foldable    (fold)
+import           Data.Maybe       (isNothing)
+import           Data.Number.Nat  (Nat, fromNat)
+import           Data.Number.Nat1 (Nat1)
+import           Data.Semigroup   ((<>))
+import           Data.Text        (Text)
+import           Data.Text.Lens   (_Text)
 
-data Sides = D4 | D6 | D8 | D10 | D12 | D20 deriving (Eq, Enum)
+data Sides = D4 | D6 | D8 | D10 | D12 | D20 deriving (Eq, Ord, Enum)
 
 sidesToNat :: Sides -> Nat1
 sidesToNat x = case x of
@@ -42,20 +42,16 @@ instance Show DiceSet where
   show (DiceSet d n b) = show n <> show d <> bonusToStr b
 
 stepTrait :: DiceSet -> DiceSet
-stepTrait (DiceSet s n b) = case s of
-  D12 -> DiceSet s        n (b + 2)
-  -- I am dubious that this should be a thing, but lets tighten up the
-  -- types later.
-  D20 -> DiceSet D12      n (b + 2)
-  _   -> DiceSet (succ s) n b
+stepTrait = stepHelper D12
 
 stepDamage :: DiceSet -> DiceSet
-stepDamage (DiceSet s n b) = case s of
-  D20 -> DiceSet s        n (b + 2)
-  _   -> DiceSet (succ s) n b
+stepDamage = stepHelper D20
+
+stepHelper mx ds | ds ^. diceSetSides >= mx =  ds & diceSetSides .~ mx & diceSetBonus %~ (+2)
+stepHelper _  ds = ds & diceSetSides %~ succ
 
 data TnCheck = TnCheck
-  { _tnCheckTn :: Nat
+  { _tnCheckTn        :: Nat
   , _tnCheckSuccesses :: Bool
   } deriving (Eq, Show)
 

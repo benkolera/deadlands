@@ -3,10 +3,9 @@
 module Common.DiceSet where
 
 import           Control.Lens
-import           Control.Lens.TH  (makeLenses)
+import           Control.Lens.TH  (makeLenses, makePrisms)
 import           Data.Bool        (bool)
 import           Data.Foldable    (fold)
-import           Data.Maybe       (isNothing)
 import           Data.Number.Nat  (Nat, fromNat)
 import           Data.Number.Nat1 (Nat1)
 import           Data.Semigroup   ((<>))
@@ -14,6 +13,7 @@ import           Data.Text        (Text)
 import           Data.Text.Lens   (_Text)
 
 data Sides = D4 | D6 | D8 | D10 | D12 | D20 deriving (Eq, Ord, Enum)
+makePrisms ''Sides
 
 sidesToNat :: Sides -> Nat1
 sidesToNat x = case x of
@@ -47,6 +47,7 @@ stepTrait = stepHelper D12
 stepDamage :: DiceSet -> DiceSet
 stepDamage = stepHelper D20
 
+stepHelper :: Sides -> DiceSet -> DiceSet
 stepHelper mx ds | ds ^. diceSetSides >= mx =  ds & diceSetSides .~ mx & diceSetBonus %~ (+2)
 stepHelper _  ds = ds & diceSetSides %~ succ
 
@@ -54,8 +55,10 @@ data TnCheck = TnCheck
   { _tnCheckTn        :: Nat
   , _tnCheckSuccesses :: Bool
   } deriving (Eq, Show)
+makeLenses ''TnCheck
 
 data RollType = StandardSet | ExplodingSet | SetVsTn TnCheck
+makePrisms ''RollType
 
 toFgCode :: RollType -> DiceSet -> Text
 toFgCode (SetVsTn (TnCheck tn s)) ds = fold

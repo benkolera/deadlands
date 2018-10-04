@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 45193268e5ec5a11fff5a933f438a5f2c89783fb2ec9e61b72c669d9b7cebfb3
+-- hash: 561e3e4110666d90212ec8413e376b475fd6f2c7bfd1342f3cfa6053f7a823ca
 
 name:           common
 version:        0.1
@@ -15,11 +15,14 @@ library
       Common.DiceSet
   other-modules:
       Common.CharacterSheet
+      Common.Strings
       Paths_common
   hs-source-dirs:
       src
+  ghc-options: -Wall
   build-depends:
       base
+    , containers
     , lens
     , nat
     , text
@@ -32,14 +35,18 @@ test-suite tests
       Common.Api
       Common.CharacterSheet
       Common.DiceSet
+      Common.Strings
       Common.CharacterSheetTest
       Common.DiceSetTest
+      Common.StringTest
       Paths_common
   hs-source-dirs:
       src
       tests
+  ghc-options: -Wall
   build-depends:
       base
+    , containers
     , lens
     , nat
     , tasty

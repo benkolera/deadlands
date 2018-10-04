@@ -6,6 +6,9 @@ dependencies:
   - lens
   - text
   - nat
+  - containers
+
+ghc-options: -Wall
 
 library:
   source-dirs: src

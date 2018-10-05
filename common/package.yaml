@@ -8,10 +8,9 @@ dependencies:
   - nat
   - containers
 
-ghc-options: -Wall
+source-dirs: src
 
 library:
-  source-dirs: src
   exposed-modules:
     - Common.Api
     - Common.DiceSet
@@ -20,7 +19,6 @@ tests:
   tests:
     main: Main.hs
     source-dirs:
-      - src
       - tests
     dependencies:
       - tasty

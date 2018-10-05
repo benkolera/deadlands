@@ -1,29 +1,49 @@
-name: frontend
-version: 0.1
-cabal-version: >= 1.8
-build-type: Simple
+-- This file has been generated from package.yaml by hpack version 0.21.2.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 38a9e02ca422e895a7da166bea6612dc099c288c5c490ff19a17338bd7dc8ef0
+
+name:           frontend
+version:        0.1
+build-type:     Simple
+cabal-version:  >= 1.10
 
 library
-  hs-source-dirs: src
-  build-depends: base
-               , common
-               , reflex-dom
-               , static
-               , text
   exposed-modules:
-    Frontend
+      Frontend
+  other-modules:
+      Paths_frontend
+  hs-source-dirs:
+      src
   ghc-options: -Wall
+  build-depends:
+      base
+    , common
+    , containers
+    , lens
+    , nat
+    , reflex-dom
+    , static
+    , text
+  default-language: Haskell2010
 
 executable frontend
   main-is: main.hs
-  hs-source-dirs: src
-  build-depends: base
-               , common
-               , reflex-dom
-               , static
-               , text
-               , frontend
-  --TODO: Make these ghc-options optional
-  ghc-options: -threaded
-  if os(darwin)
-     ghc-options: -dynamic
+  other-modules:
+      Frontend
+      Paths_frontend
+  hs-source-dirs:
+      src
+  ghc-options: -Wall -threaded
+  build-depends:
+      base
+    , common
+    , containers
+    , frontend
+    , lens
+    , nat
+    , reflex-dom
+    , static
+    , text
+  default-language: Haskell2010

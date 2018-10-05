@@ -1,0 +1,25 @@
+name: frontend
+version: "0.1"
+
+dependencies:
+  - base
+  - common
+  - lens
+  - text
+  - nat
+  - containers
+  - static
+  - reflex-dom
+
+ghc-options: -Wall
+source-dirs: src
+
+library:
+  exposed-modules:
+    - Frontend
+
+executable:
+  main: main.hs
+  ghc-options: -threaded
+  dependencies:
+    - frontend

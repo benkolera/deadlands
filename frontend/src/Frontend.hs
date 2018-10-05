@@ -6,7 +6,7 @@ module Frontend where
 import qualified Data.Text as T
 import Reflex.Dom.Core
 
-import Common.Api
+import Common.CharacterSheet
 import Static
 
 frontend :: (StaticWidget x (), Widget x ())
@@ -15,5 +15,4 @@ frontend = (head', body)
     head' = el "title" $ text "Obelisk Minimal Example"
     body = do
       text "asss"
-      el "p" $ text $ T.pack commonStuff
       elAttr "img" ("src" =: static @"obelisk.jpg") blank

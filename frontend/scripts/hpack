@@ -1,3 +1,0 @@
-#!/usr/bin/env sh
-
-nix-shell -p "haskellPackages.ghcWithPackages (p: with p; [ hpack ])" --run 'hpack'

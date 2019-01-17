@@ -1,6 +1,0 @@
-#!/usr/bin/env sh
-
-THIS_DIR=$(dirname $0);
-
-$THIS_DIR/hpack
-nix-shell --run 'ghcid -c "cabal new-repl test:tests" -T "Main.main"'

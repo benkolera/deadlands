@@ -1,51 +1,40 @@
--- This file has been generated from package.yaml by hpack version 0.21.2.
---
--- see: https://github.com/sol/hpack
---
--- hash: 561e3e4110666d90212ec8413e376b475fd6f2c7bfd1342f3cfa6053f7a823ca
-
-name:           common
-version:        0.1
-build-type:     Simple
-cabal-version:  >= 1.10
+name: common
+version: 0.1
+cabal-version: >= 1.8
+build-type: Simple
 
 library
-  exposed-modules:
-      Common.Api
-      Common.DiceSet
-  other-modules:
-      Common.CharacterSheet
-      Common.Strings
-      Paths_common
-  hs-source-dirs:
-      src
-  ghc-options: -Wall
-  build-depends:
-      base
-    , containers
-    , lens
-    , nat
+  hs-source-dirs: src
+  build-depends: base
+               , obelisk-route
+               , mtl
+               , containers
+               , lens
+               , nat
     , text
+               , text
+  ghc-options: -Wall
+  exposed-modules:
+    Common.Api
+    Common.Route
+    Common.DiceSet
+    Common.CharacterSheet
+    Common.Strings
   default-language: Haskell2010
 
 test-suite tests
   type: exitcode-stdio-1.0
   main-is: Main.hs
   other-modules:
-      Common.Api
-      Common.CharacterSheet
-      Common.DiceSet
-      Common.Strings
       Common.CharacterSheetTest
       Common.DiceSetTest
       Common.StringTest
-      Paths_common
   hs-source-dirs:
-      src
       tests
   ghc-options: -Wall
   build-depends:
       base
+    , common
     , containers
     , lens
     , nat

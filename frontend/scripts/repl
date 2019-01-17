@@ -1,6 +1,0 @@
-#!/usr/bin/env sh
-
-THIS_DIR=$(dirname $0);
-
-$THIS_DIR/hpack
-nix-shell --run "cabal new-repl $1 --builddir=dist/dante"

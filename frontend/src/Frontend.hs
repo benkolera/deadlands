@@ -15,9 +15,7 @@ import Obelisk.Generated.Static
 
 frontend :: Frontend (R FrontendRoute)
 frontend = Frontend
-  { _frontend_head = el "title" $ text "Obelisk Minimal Example"
+  { _frontend_head = el "title" $ text "Deadlands Character Sheet"
   , _frontend_body = do
-      text "Welcome to Obelisk!"
-      el "p" $ text $ T.pack commonStuff
-      elAttr "img" ("src" =: static @"obelisk.jpg") blank
+      text "DEADLANDS"
   }

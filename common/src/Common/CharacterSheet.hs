@@ -129,12 +129,12 @@ gabriela :: CharacterSheet
 gabriela = CharacterSheet
   { _chrSheetTraits = Traits
     { _traitsDeftness = Trait (DiceSet D8 4 0) $ DeftnessAptitudes
-      { _deftnessShootin = Concentration 4 $ ShootinConcentrations
+      { _deftnessShootin = Concentration 5 $ ShootinConcentrations
         { _shootinShotgun = True
         }
       }
     , _traitsNimbleness = Trait (DiceSet D8 4 0) $ NimblenessAptitudes
-      { _nimblenessFightin = Concentration 4 $ FightinConcentrations
+      { _nimblenessFightin = Concentration 5 $ FightinConcentrations
         { _fightinBrawling = True
         }
       }
@@ -142,8 +142,8 @@ gabriela = CharacterSheet
     , _traitsStrength = Trait (DiceSet D6 4 0) $ StrengthAptitudes
     , _traitsVigor = Trait (DiceSet D12 3 0) $ VigorAptitudes
     , _traitsCognition = Trait (DiceSet D12 4 0) $ CognitionAptitudes
-      { _cognitionScruitinize = 3
-      , _cognitionSearch      = 2
+      { _cognitionScruitinize = 5
+      , _cognitionSearch      = 4
       }
     , _traitsKnowledge = Trait (DiceSet D8 3 0) $ KnowledgeAptitudes
       { _knowledgeLatin = 2
@@ -178,5 +178,5 @@ gabriela = CharacterSheet
   , _chrSheetKnacks = Set.fromList
     [BornOnChristmas]
   , _chrSheetSize = 6
-  , _chrSheetLightArmor = 6
+  , _chrSheetLightArmor = 0
   }

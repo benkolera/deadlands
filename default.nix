@@ -1,6 +1,6 @@
 { system ? builtins.currentSystem # TODO: Get rid of this system cruft
 , iosSdkVersion ? "10.2"
-, hie ? false
+, hie ? true
 }:
 let 
   hie-nix = (import ./nix/hie-nix.nix { ghc843 = true; inherit hie; });
@@ -12,3 +12,4 @@ project ./. ({ ... }: {
   ios.bundleName = "Obelisk Minimal Example";
   withHoogle = true;
   tools = _: hie-nix.hie-tools;
+})

@@ -7,6 +7,7 @@ library
   hs-source-dirs: src
   build-depends: base
                , common
+               , clay
                , obelisk-frontend
                , obelisk-route
                , reflex-dom
@@ -14,6 +15,8 @@ library
                , text
   exposed-modules:
     Frontend
+  other-modules:
+    Frontend.Style
   ghc-options: -Wall
 
 executable frontend

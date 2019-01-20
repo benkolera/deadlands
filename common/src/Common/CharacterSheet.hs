@@ -1,4 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Common.CharacterSheet where
 
@@ -8,6 +9,7 @@ import           Data.Number.Nat  (Nat)
 import           Data.Number.Nat1 (Nat1)
 import           Data.Set         (Set)
 import qualified Data.Set         as Set
+import           Data.Text        (Text)
 
 import           Common.DiceSet
 
@@ -114,6 +116,14 @@ data Knacks = BornOnChristmas
   deriving (Eq, Ord, Show)
 makePrisms ''Knacks
 
+data CharacterBackground = CharacterBackground
+  { _chrBgName       :: Text
+  , _chrBgAge        :: Nat1
+  , _chrBgOccupation :: Text
+  , _chrBgHomeTown   :: Text
+  } deriving (Show, Eq)
+makeLenses ''CharacterBackground
+
 data CharacterSheet = CharacterSheet
   { _chrSheetTraits      :: Traits
   , _chrSheetEdges       :: Set Edges
@@ -122,6 +132,7 @@ data CharacterSheet = CharacterSheet
   , _chrSheetKnacks      :: Set Knacks
   , _chrSheetSize        :: Nat1
   , _chrSheetLightArmor  :: Nat1
+  , _chrSheetBackground  :: CharacterBackground
   } deriving (Show, Eq)
 makeLenses ''CharacterSheet
 
@@ -179,4 +190,10 @@ gabriela = CharacterSheet
     [BornOnChristmas]
   , _chrSheetSize = 6
   , _chrSheetLightArmor = 0
+  , _chrSheetBackground = CharacterBackground
+    { _chrBgName = "Sister Gabriela"
+    , _chrBgAge = 42
+    , _chrBgOccupation = "Catholic Nun"
+    , _chrBgHomeTown = "Paso del Norte, México"
+    }
   }

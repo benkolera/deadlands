@@ -9,8 +9,6 @@ import Control.Lens
 
 import           Clay                     (render)
 import           Data.Bool                (bool)
-import           Data.Foldable            (traverse_)
-import           Data.Functor             (void)
 import qualified Data.Map                 as Map
 import           Data.Number.Nat          (Nat)
 import           Data.Number.Nat1         (toNat1)
@@ -27,6 +25,9 @@ import           Common.DiceSet
 import           Frontend.Style
 import           Obelisk.Generated.Static
 
+fget :: Functor f => Getter a b -> f a -> f b
+fget g = fmap (view g)
+
 traitName
   :: (PostBuild t m, DomBuilder t m)
   => T.Text -> Dynamic t DiceSet -> m ()
@@ -39,79 +40,95 @@ traitName n dsDyn = do
 concentration
   :: (PostBuild t m, DomBuilder t m)
   => T.Text
+  -> Dynamic t (Trait a)
+  -> Getter a (Concentration b)
+  -> (Dynamic t (Concentration b) -> m ())
   -> m ()
-  -> m ()
-concentration cn childLis = do
+concentration cn tDyn getter childLis = do
   el "li" $ do
     text cn
     elClass "ul" "concentration" $ do
-      childLis
+      let cDyn = fget (traitAptitudes.getter) tDyn
+      childLis cDyn
 
 aptitude
   :: (PostBuild t m, DomBuilder t m)
   => T.Text
-  -> Dynamic t DiceSet
+  -> Dynamic t (Trait z)
+  -> Dynamic t Nat
   -> m ()
-aptitude aName dsDyn = elClass "li" "pure-aptitude" $ do
+aptitude aName tDyn levelDyn = elClass "li" "pure-aptitude" $ do
   elClass "span" "name" $ text aName
-  elClass "span" "value" $ display dsDyn
+  elClass "span" "value" . display $ aptitudeDice
+    <$> (fget traitDiceSet tDyn)
+    <*> levelDyn
 
 aptitudeDice :: DiceSet -> Nat -> DiceSet
 aptitudeDice ds 0 = ds & diceSetNum .~ 1 & diceSetBonus %~ (\x -> x - 4)
 aptitudeDice ds n = ds & diceSetNum .~ (toNat1 n)
 
-concentrationExtract
-  :: Applicative (Dynamic t)
-  => Dynamic t DiceSet
+concentrationAptitude
+  :: (PostBuild t m, DomBuilder t m)
+  => T.Text
+  -> Dynamic t (Trait z)
   -> Dynamic t (Concentration a)
   -> Getter a Bool
-  -> Dynamic t (Maybe DiceSet)
-concentrationExtract traitDsDyn cDyn g =
-  (\ds c -> bool Nothing (Just (aptitudeDice ds (c ^. concentrationLevel))) (view (concentrationAptitudes.g) c))
-  <$> traitDsDyn
-  <*> cDyn
+  -> m ()
+concentrationAptitude label tDyn cDyn g = do
+  let alDyn = (\c ->
+                bool
+                0
+                (c^.concentrationLevel)
+                (c^.concentrationAptitudes.g)
+             )
+        <$> cDyn
+  aptitude label tDyn alDyn
+
+pureAptitude
+  :: (PostBuild t m, DomBuilder t m)
+  => T.Text
+  -> Dynamic t (Trait a)
+  -> Getter a Nat
+  -> m ()
+pureAptitude name tDyn getter = aptitude name tDyn (view (traitAptitudes.getter) <$> tDyn)
 
 trait
   :: (PostBuild t m, DomBuilder t m)
   => Dynamic t s
   -> T.Text
   -> Getting (Trait a) s (Trait a)
-  -> (Dynamic t (Trait a) -> Dynamic t DiceSet -> m ())
+  -> (Dynamic t (Trait a) -> m ())
   -> m ()
 trait traitsDyn tLabel tGetter aptitudes =
   elClass "li" "trait" $ do
     let tDyn = view tGetter <$> traitsDyn
-    let tDsDyn = view traitDiceSet <$> tDyn
-    traitName tLabel tDsDyn
-    elClass "ul" "aptitudes" $ aptitudes tDyn tDsDyn
+    traitName tLabel (fget traitDiceSet tDyn)
+    elClass "ul" "aptitudes" $ aptitudes tDyn
 
 traits ::(PostBuild t m, DomBuilder t m) => Dynamic t Traits -> m ()
 traits traitsDyn = elClass "div" "traits" $ do
   el "h1" $ text "Traits"
-  el "ul" . trait traitsDyn "Deftness" traitsDeftness $ \tDyn tDsDyn ->
-    concentration "Shootin" $ do
-      let sDyn = (view (traitAptitudes.deftnessShootin) <$> tDyn)
-      let cDyn = concentrationExtract tDsDyn sDyn shootinShotgun
-      void . dyn $ (traverse_ (aptitude "Shotgun" . constDyn) <$> cDyn)
-  el "ul" . trait traitsDyn "Nimbleness" traitsNimbleness $ \tDyn tDsDyn ->
-    concentration "Fightin" $ do
-      let fDyn = (view (traitAptitudes.nimblenessFightin) <$> tDyn)
-      let cDyn = concentrationExtract tDsDyn fDyn fightinBrawling
-      void . dyn $ (traverse_ (aptitude "Brawlin" . constDyn) <$> cDyn)
-    --aptitude "Climbin" ((view (traitAptitudes.nimblenessFightin) <$> tDyn)
+  el "ul" . trait traitsDyn "Deftness" traitsDeftness $ \tDyn ->
+    concentration "Shootin" tDyn deftnessShootin $ \cDyn -> do
+      concentrationAptitude "Shotgun" tDyn cDyn shootinShotgun
+  el "ul" . trait traitsDyn "Nimbleness" traitsNimbleness $ \tDyn -> do
+    concentration "Fightin" tDyn nimblenessFightin $ \cDyn -> do
+      concentrationAptitude "Brawlin" tDyn cDyn fightinBrawlin
+    pureAptitude "Climbin" tDyn nimblenessClimbin
+    pureAptitude "Dodge" tDyn nimblenessDodge
 
 
 info :: (PostBuild t m, DomBuilder t m) => Dynamic t CharacterBackground -> m ()
 info bgDyn = elClass "div" "info" $ do
-  el "h2" $dynText (view chrBgName <$> bgDyn)
+  el "h2" $dynText (fget chrBgName bgDyn)
   elAttr "img" (Map.fromList [("src",static @"St_Teresa.jpg"), ("width","125")]) blank
   el "dl" $ do
     el "dt" $ text "Occupation"
-    el "dd" $ dynText (view chrBgOccupation <$> bgDyn)
+    el "dd" $ dynText (fget chrBgOccupation bgDyn)
     el "dt" $ text "Hometown"
-    el "dd" $ dynText (view chrBgHomeTown <$> bgDyn)
+    el "dd" $ dynText (fget chrBgHomeTown bgDyn)
     el "dt" $ text "Age"
-    el "dd" $ dynText (view (chrBgAge . to show . packed) <$> bgDyn)
+    el "dd" $ dynText (fget (chrBgAge . to show . packed) bgDyn)
 
 frontend :: Frontend (R FrontendRoute)
 frontend = Frontend

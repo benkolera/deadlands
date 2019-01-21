@@ -25,7 +25,7 @@ data ShootinConcentrations = ShootinConcentrations
 makeLenses ''ShootinConcentrations
 
 data FightinConcentrations = FightinConcentrations
-  { _fightinBrawling :: Bool
+  { _fightinBrawlin :: Bool
   } deriving (Eq, Show)
 makeLenses ''FightinConcentrations
 
@@ -36,6 +36,8 @@ makeLenses ''DeftnessAptitudes
 
 data NimblenessAptitudes = NimblenessAptitudes
   { _nimblenessFightin :: Concentration FightinConcentrations
+  , _nimblenessClimbin :: Nat
+  , _nimblenessDodge   :: Nat
   } deriving (Eq, Show)
 makeLenses ''NimblenessAptitudes
 
@@ -146,8 +148,10 @@ gabriela = CharacterSheet
       }
     , _traitsNimbleness = Trait (DiceSet D8 4 0) $ NimblenessAptitudes
       { _nimblenessFightin = Concentration 5 $ FightinConcentrations
-        { _fightinBrawling = True
+        { _fightinBrawlin = True
         }
+      , _nimblenessClimbin = 1
+      , _nimblenessDodge = 0
       }
     , _traitsQuickness = Trait (DiceSet D10 3 0) $ QuicknessAptitudes
     , _traitsStrength = Trait (DiceSet D6 4 0) $ StrengthAptitudes

@@ -29,19 +29,29 @@ data FightinConcentrations = FightinConcentrations
   } deriving (Eq, Show)
 makeLenses ''FightinConcentrations
 
+data QuickLoadConcentrations = QuickLoadConcentrations
+  { _quickLoadShotgun :: Bool
+  } deriving (Eq, Show)
+makeLenses ''QuickLoadConcentrations
+
 data DeftnessAptitudes = DeftnessAptitudes
   { _deftnessShootin :: Concentration ShootinConcentrations
   } deriving (Eq, Show)
 makeLenses ''DeftnessAptitudes
 
 data NimblenessAptitudes = NimblenessAptitudes
-  { _nimblenessFightin :: Concentration FightinConcentrations
-  , _nimblenessClimbin :: Nat
-  , _nimblenessDodge   :: Nat
+  { _nimblenessFightin    :: Concentration FightinConcentrations
+  , _nimblenessClimbin    :: Nat
+  , _nimblenessDodge      :: Nat
+  , _nimblenessHorseRidin :: Nat
   } deriving (Eq, Show)
 makeLenses ''NimblenessAptitudes
 
-data QuicknessAptitudes = QuicknessAptitudes deriving (Eq, Show)
+data QuicknessAptitudes = QuicknessAptitudes
+  { _quicknessQuickLoad :: Concentration QuickLoadConcentrations
+  } deriving (Eq, Show)
+makeLenses ''QuicknessAptitudes
+
 data StrengthAptitudes = StrengthAptitudes deriving (Eq, Show)
 data VigorAptitudes = VigorAptitudes deriving (Eq, Show)
 
@@ -66,7 +76,10 @@ data MienAptitudes = MienAptitudes
   } deriving (Eq, Show)
 makeLenses ''MienAptitudes
 
-data SmartsAptitudes = SmartsAptitudes deriving (Eq, Show)
+data SmartsAptitudes = SmartsAptitudes
+  { _smartsStreetwise :: Nat
+  } deriving (Eq, Show)
+makeLenses ''SmartsAptitudes
 
 data SpiritAptitudes = SpiritAptitudes
   { _spiritGuts  :: Nat
@@ -150,10 +163,15 @@ gabriela = CharacterSheet
       { _nimblenessFightin = Concentration 5 $ FightinConcentrations
         { _fightinBrawlin = True
         }
-      , _nimblenessClimbin = 1
-      , _nimblenessDodge = 0
+      , _nimblenessClimbin    = 1
+      , _nimblenessHorseRidin = 1
+      , _nimblenessDodge      = 0
       }
     , _traitsQuickness = Trait (DiceSet D10 3 0) $ QuicknessAptitudes
+      { _quicknessQuickLoad = Concentration 1 $ QuickLoadConcentrations
+        { _quickLoadShotgun = True
+        }
+      }
     , _traitsStrength = Trait (DiceSet D6 4 0) $ StrengthAptitudes
     , _traitsVigor = Trait (DiceSet D12 3 0) $ VigorAptitudes
     , _traitsCognition = Trait (DiceSet D12 4 0) $ CognitionAptitudes
@@ -172,6 +190,8 @@ gabriela = CharacterSheet
       { _mienOverawe = 0
       }
     , _traitsSmarts = Trait (DiceSet D8 1 0) $ SmartsAptitudes
+      { _smartsStreetwise = 1
+      }
     , _traitsSpirit = Trait (DiceSet D12 4 0) $ SpiritAptitudes
       { _spiritFaith = 5
       , _spiritGuts  = 4

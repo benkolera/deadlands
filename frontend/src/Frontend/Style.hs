@@ -52,12 +52,58 @@ style = do
     color (rgb 48 48 48)
     fontFamily ["SecretST"] [monospace]
 
+  ".dice-icon" ? do
+    width (em 1.2)
+    height (em 1.2)
+
+  ".dicecode-container" ? do
+    textAlign (alignSide sideLeft)
+    display inline
+    paddingLeft (em 0.2)
+
   ".character-sheet" ? do
     display flex
     flexDirection row
     justifyContent spaceAround
+    textAlign (alignSide sideCenter)
     width (pct 100)
     height (pct 100)
+
+    ".traits" ? do
+      flexGrow 1
+      marginRight (rem 3)
+      marginLeft (rem 0.5)
+      ".trait" ? do
+        display flex
+        textAlign (alignSide sideLeft)
+        flexWrap FB.wrap
+        flexDirection row
+        "column-count" -: "2"
+        width (rem 20)
+        listStyleType none
+        marginBottom (rem 1)
+        marginLeft (em (-1))
+
+        ".trait-name" ? do
+          flexGrow 1
+        ".trait-dice" ? do
+          FB.flex 0 0 (rem 6)
+          textAlign (alignSide sideRight)
+        ".aptitudes" ? do
+          listStyleType none
+          marginLeft (em (-1))
+          width (rem 19)
+          ".concentrations" ? do
+            listStyleType none
+            marginLeft (em (-1))
+            width (rem 17)
+          ".aptitude" ? do
+            display flex
+            ".name" ? do
+              flexGrow 1
+            ".value" ? do
+              FB.flex 0 0 (em 5)
+              textAlign (alignSide sideRight)
 
     ".effects" ? do
       FB.flex 0 0 (px 400)
@@ -80,5 +126,14 @@ style = do
           dd ? do
             "margin-inline-start" -: "0.5em"
         marginBottom (rem 3)
+
+    ".spells" ? do
+      flexGrow 2
+      textAlign center
+      marginLeft (em 3)
+      marginRight (em 1)
+      height (pct 100)
+      overflow auto
+      display block
 
   pure ()

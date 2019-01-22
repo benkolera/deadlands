@@ -9,6 +9,7 @@ import Control.Lens
 
 import           Clay                     (render)
 import           Data.Bool                (bool)
+import           Data.Foldable            (traverse_)
 import qualified Data.Map                 as Map
 import           Data.Number.Nat          (Nat)
 import           Data.Number.Nat1         (toNat1)
@@ -36,32 +37,39 @@ traitName n dsDyn = do
     text n
   elClass "span" "trait-dice" $ do
     display dsDyn
+    diceCodeRoller dsDyn True
 
 concentration
   :: (PostBuild t m, DomBuilder t m)
   => T.Text
-  -> Dynamic t (Trait a)
   -> Getter a (Concentration b)
-  -> (Dynamic t (Concentration b) -> m ())
+  -> [Dynamic t (Concentration b) -> Dynamic t (Trait a) -> m ()]
+  -> Dynamic t (Trait a)
   -> m ()
-concentration cn tDyn getter childLis = do
+concentration cn getter childLis tDyn = do
   el "li" $ do
     text cn
     elClass "ul" "concentration" $ do
       let cDyn = fget (traitAptitudes.getter) tDyn
-      childLis cDyn
+      traverse_ (\f -> f cDyn tDyn) childLis
+
+diceCodeRoller :: DomBuilder t m => Dynamic t DiceSet -> Bool -> m ()
+diceCodeRoller _ _ = do
+  elClass "div" "dicecode-container" $ do
+    (imgE,_) <- elAttr' "img" (Map.fromList [("src",static @"dice.svg"),("class","dice-icon")]) blank
+    pure ()
 
 aptitude
   :: (PostBuild t m, DomBuilder t m)
   => T.Text
-  -> Dynamic t (Trait z)
   -> Dynamic t Nat
+  -> Dynamic t (Trait z)
   -> m ()
-aptitude aName tDyn levelDyn = elClass "li" "pure-aptitude" $ do
+aptitude aName levelDyn tDyn = elClass "li" "aptitude" $ do
+  let aDsDyn = aptitudeDice <$> (fget traitDiceSet tDyn) <*> levelDyn
   elClass "span" "name" $ text aName
-  elClass "span" "value" . display $ aptitudeDice
-    <$> (fget traitDiceSet tDyn)
-    <*> levelDyn
+  elClass "span" "value" . display $ aDsDyn
+  diceCodeRoller aDsDyn False
 
 aptitudeDice :: DiceSet -> Nat -> DiceSet
 aptitudeDice ds 0 = ds & diceSetNum .~ 1 & diceSetBonus %~ (\x -> x - 4)
@@ -70,11 +78,11 @@ aptitudeDice ds n = ds & diceSetNum .~ (toNat1 n)
 concentrationAptitude
   :: (PostBuild t m, DomBuilder t m)
   => T.Text
-  -> Dynamic t (Trait z)
-  -> Dynamic t (Concentration a)
   -> Getter a Bool
+  -> Dynamic t (Concentration a)
+  -> Dynamic t (Trait z)
   -> m ()
-concentrationAptitude label tDyn cDyn g = do
+concentrationAptitude label g cDyn tDyn = do
   let alDyn = (\c ->
                 bool
                 0
@@ -82,46 +90,82 @@ concentrationAptitude label tDyn cDyn g = do
                 (c^.concentrationAptitudes.g)
              )
         <$> cDyn
-  aptitude label tDyn alDyn
+  aptitude label alDyn tDyn
 
 pureAptitude
   :: (PostBuild t m, DomBuilder t m)
   => T.Text
-  -> Dynamic t (Trait a)
   -> Getter a Nat
+  -> Dynamic t (Trait a)
   -> m ()
-pureAptitude name tDyn getter = aptitude name tDyn (view (traitAptitudes.getter) <$> tDyn)
+pureAptitude name getter tDyn =
+  aptitude name (fget (traitAptitudes.getter) tDyn) tDyn
 
 trait
   :: (PostBuild t m, DomBuilder t m)
   => Dynamic t s
   -> T.Text
   -> Getting (Trait a) s (Trait a)
-  -> (Dynamic t (Trait a) -> m ())
+  -> [Dynamic t (Trait a) -> m ()]
   -> m ()
 trait traitsDyn tLabel tGetter aptitudes =
   elClass "li" "trait" $ do
     let tDyn = view tGetter <$> traitsDyn
     traitName tLabel (fget traitDiceSet tDyn)
-    elClass "ul" "aptitudes" $ aptitudes tDyn
+    elClass "ul" "aptitudes" $ traverse_ ($ tDyn) aptitudes
 
 traits ::(PostBuild t m, DomBuilder t m) => Dynamic t Traits -> m ()
 traits traitsDyn = elClass "div" "traits" $ do
   el "h1" $ text "Traits"
-  el "ul" . trait traitsDyn "Deftness" traitsDeftness $ \tDyn ->
-    concentration "Shootin" tDyn deftnessShootin $ \cDyn -> do
-      concentrationAptitude "Shotgun" tDyn cDyn shootinShotgun
-  el "ul" . trait traitsDyn "Nimbleness" traitsNimbleness $ \tDyn -> do
-    concentration "Fightin" tDyn nimblenessFightin $ \cDyn -> do
-      concentrationAptitude "Brawlin" tDyn cDyn fightinBrawlin
-    pureAptitude "Climbin" tDyn nimblenessClimbin
-    pureAptitude "Dodge" tDyn nimblenessDodge
-
+  el "ul" $ do
+    trait traitsDyn "Deftness" traitsDeftness $
+      [ concentration "Shootin" deftnessShootin
+        [ concentrationAptitude "Shotgun" shootinShotgun
+        ]
+      ]
+    trait traitsDyn "Nimbleness" traitsNimbleness $
+      [ concentration "Fightin" nimblenessFightin
+        [ concentrationAptitude "Brawlin" fightinBrawlin
+        ]
+      , pureAptitude "Climbin" nimblenessClimbin
+      , pureAptitude "Dodge" nimblenessDodge
+      ]
+    trait traitsDyn "Quickness" traitsQuickness $
+      [ concentration "Quick Load" quicknessQuickLoad
+        [ concentrationAptitude "Shotgun" quickLoadShotgun
+        ]
+      ]
+    trait traitsDyn "Strength" traitsStrength $
+      []
+    trait traitsDyn "Vigor" traitsVigor $
+      []
+    trait traitsDyn "Cognition" traitsCognition $
+      [ pureAptitude "Search" cognitionSearch
+      , pureAptitude "Scruitinize" cognitionScruitinize
+      ]
+    trait traitsDyn "Knowledge" traitsKnowledge $
+      [ pureAptitude "Occult" knowledgeOccult
+      , pureAptitude "Theology" knowledgeTheology
+      , pureAptitude "Latin" knowledgeLatin
+      , pureAptitude "English" knowledgeEnglish
+      , pureAptitude "Spanish" knowledgeSpanish
+      , pureAptitude "Area: Chihuahua" knowledgeChihuahua
+      ]
+    trait traitsDyn "Mien" traitsMien $
+      [ pureAptitude "Overawe" mienOverawe
+      ]
+    trait traitsDyn "Smarts" traitsSmarts $
+      [ pureAptitude "Streetwise" smartsStreetwise
+      ]
+    trait traitsDyn "Spirit" traitsSpirit $
+      [ pureAptitude "Faith" spiritFaith
+      , pureAptitude "Guts" spiritFaith
+      ]
 
 info :: (PostBuild t m, DomBuilder t m) => Dynamic t CharacterBackground -> m ()
 info bgDyn = elClass "div" "info" $ do
   el "h2" $dynText (fget chrBgName bgDyn)
-  elAttr "img" (Map.fromList [("src",static @"St_Teresa.jpg"), ("width","125")]) blank
+  --elAttr "img" (Map.fromList [("src",static @"St_Teresa.jpg"), ("width","125")]) blank
   el "dl" $ do
     el "dt" $ text "Occupation"
     el "dd" $ dynText (fget chrBgOccupation bgDyn)

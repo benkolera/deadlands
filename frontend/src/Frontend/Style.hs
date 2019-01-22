@@ -61,6 +61,27 @@ style = do
     display inline
     paddingLeft (em 0.2)
 
+  ".modal" ? do
+    display none
+    position fixed
+    zIndex 1
+    left (px 0)
+    top (px 0)
+    width (pct 100)
+    height (pct 100)
+    overflow auto
+    backgroundColor (rgba 0 0 0 0.4)
+
+    ".opened" & do
+      display block
+
+    ".modal-content" ? do
+      backgroundColor (rgb 254 254 254)
+      margin (pct 15) auto (pct 15) auto
+      padding (em 2) (em 2) (em 2) (em 2)
+      border solid (px 1) (rgb 136 136 136)
+      width (pct 80)
+
   ".character-sheet" ? do
     display flex
     flexDirection row

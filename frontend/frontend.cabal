@@ -7,10 +7,16 @@ library
   hs-source-dirs: src
   build-depends: base
                , common
+               , containers
                , clay
+               , jsaddle
+               , ghcjs-dom
+               , lens
+               , nat
                , obelisk-frontend
                , obelisk-route
                , reflex-dom
+               , semigroupoids
                , obelisk-generated-static
                , text
   exposed-modules:

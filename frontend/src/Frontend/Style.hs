@@ -33,8 +33,11 @@ style = do
       , FontFaceSrcUrl (Static.static @"durango_western_eroded_demo.woff")  (Just WOFF)
       ]
 
+  let headerFont = fontFamily ["Durango"] []
+  let bodyFont   = fontFamily ["SecretST"] [monospace]
+
   fold1 (h1 :| [h2,h3,h4]) ? do
-    fontFamily ["Durango"] []
+    headerFont
     fontWeight normal
     color (rgb 48 48 48)
     lineHeight (em 1.2)
@@ -50,9 +53,13 @@ style = do
   body ? do
     backgroundImage . url $ Static.static @"paper.png"
     color (rgb 48 48 48)
-    fontFamily ["SecretST"] [monospace]
+    bodyFont
 
   ".dice-icon" ? do
+    width (em 1.2)
+    height (em 1.2)
+
+  ".copy-icon" ? do
     width (em 1.2)
     height (em 1.2)
 
@@ -60,6 +67,38 @@ style = do
     textAlign (alignSide sideLeft)
     display inline
     paddingLeft (em 0.2)
+
+    ".copy-icon" ? do
+      marginBottom (em (- 0.2))
+
+    ".dice-codes" ? do
+      marginTop (em 1)
+      marginBottom (em 1)
+      width (em 20)
+
+    ".dice-code" ? do
+      display flex
+      marginTop (em 0.5)
+      ".dice-code-label" ? do
+        flexGrow 1
+      ".dice-code-code" ? do
+        padding (em 0) (em 0.5) (em 0) (em 0.5)
+
+  ".copypasta" ? do
+    ".inline" & do
+      bodyFont
+      fontSize (em 1)
+      backgroundColor (rgba 255 255 255 255)
+      borderWidth (em 0)
+      padding (em 0) (em 0.5) (em 0) (em 0.5)
+      width (em 10)
+      textAlign (alignSide sideRight)
+      ":focus" &
+        outlineWidth (em 0)
+    ".hidden" & do
+      position absolute
+      top (px (-666))
+      left (px (-666))
 
   ".modal" ? do
     display none

@@ -11,7 +11,7 @@ module Frontend where
 import           Control.Lens
 
 import           Clay                       (render)
-import           Control.Monad.IO.Class     (MonadIO, liftIO)
+import           Control.Monad              (when)
 import           Control.Monad.Fix          (MonadFix)
 import           Data.Bool                  (bool)
 import           Data.Foldable              (traverse_)
@@ -21,12 +21,12 @@ import           Data.Number.Nat1           (toNat1)
 import qualified Data.Text                  as T
 import qualified Data.Text.Lazy             as TL
 import           Data.Text.Lens             (packed)
+import qualified GHCJS.DOM.Document         as JsDocument
 import qualified GHCJS.DOM.HTMLInputElement as JsInput
-import           GHCJS.DOM.Types            (MonadJSM, liftJSM)
+import           GHCJS.DOM.Types            (MonadJSM)
 import           Obelisk.Frontend
 import           Obelisk.Route
 import           Reflex.Dom
-import           Reflex.Dom.Core
 
 import           Common.CharacterSheet
 import           Common.DiceSet
@@ -39,7 +39,7 @@ fget g = fmap (view g)
 
 traitName
   :: (MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
-     , DomBuilderSpace m ~ GhcjsDomSpace, PerformEvent t m, MonadJSM (Performable m))
+     , DomBuilderSpace m ~ GhcjsDomSpace, PerformEvent t m, MonadJSM (Performable m), HasDocument m)
   => T.Text
   -> Dynamic t DiceSet
   -> m ()
@@ -66,50 +66,74 @@ concentration cn getter childLis tDyn = do
 
 diceCodeRoller
   :: (MonadFix m, MonadHold t m, DomBuilder t m, PostBuild t m, MonadJSM (Performable m)
-     , DomBuilderSpace m ~ GhcjsDomSpace, PerformEvent t m)
+     , DomBuilderSpace m ~ GhcjsDomSpace, PerformEvent t m, HasDocument m)
   => Dynamic t DiceSet
   -> Bool
   -> m ()
-diceCodeRoller dsDyn forTrait = do
+diceCodeRoller tdsDyn forTrait = do
   elClass "div" "dicecode-container" $ mdo
     (imgElt,_) <- elAttr' "img" (Map.fromList [("src",static @"dice.svg"),("class","dice-icon")]) blank
     let openE = True <$ domEvent Click imgElt
     modalOpenedDyn <- foldDyn const False (leftmost [openE, (False <$ closeE)])
     closeE <- elDynClass "div" (bool "modal" "modal opened" <$> modalOpenedDyn) $ do
       elClass "div" "modal-content" $ do
-        dsInit <- sample . current $ dsDyn
-        tiElt <- textInput $ def
-          & textInputConfig_initialValue .~ (T.pack . show $ dsInit)
-          & textInputConfig_setValue     .~ ((T.pack . show) <$> updated dsDyn)
-
-        copyE <- button "copy"
-        let rawElt = tiElt ^. textInput_builderElement.to _inputElement_raw
-        performEvent_ $ (JsInput.select rawElt) <$ copyE
+        tn <- el "label" $ do
+          text "TN:"
+          textInput $ def
+            & textInputConfig_initialValue .~ "5"
+            & textInputConfig_inputType    .~ "number"
+            & textInputConfig_attributes   .~ (constDyn (Map.fromList [("min","1"),("class","tn-input")]))
+        let tnDyn = read . T.unpack <$> (tn^.textInput_value)
+        elClass "ul" "dice-codes" $ do
+          when forTrait . el "li" $ copyPasta "Untrained" tnDyn (aptitudeDice 0 <$> tdsDyn)
+          el "li" $ copyPasta "Normal" tnDyn tdsDyn
         button "close"
     pure ()
+  where
+    copyPasta label tnDyn dsDyn = elClass "div" "dice-code" $ do
+        elClass "div" "dice-code-label" $ text label
+        elClass "div" "dice-code-code" $ do
+          let dcDyn = (\tn -> toFgCode (SetVsTn (TnCheck tn True))) <$> tnDyn <*> dsDyn
+          dcInit <- sample . current $ dcDyn
+          ti <- textInput $ def
+            & textInputConfig_initialValue .~ dcInit
+            & textInputConfig_setValue     .~ updated dcDyn
+            & textInputConfig_attributes   .~ (constDyn ("class" =: "copypasta inline"))
+
+          (imgElt,_) <- elAttr' "img" (Map.fromList [("src",static @"copy-content.svg"),("class","copy-icon")]) blank
+          let copyE = True <$ domEvent Click imgElt
+          let rawElt = ti ^. textInput_builderElement.to _inputElement_raw
+          doc <- askDocument
+          performEvent_ $ copyToClipboard rawElt doc <$ copyE
+    copyToClipboard elt doc = do
+      JsInput.select elt
+      -- Watch out, this can only be executed in a user event so it wont work
+      -- in ob run. Sadness.
+      JsDocument.execCommand_ doc ("copy"::String) False (Nothing::Maybe String)
+      pure ()
 
 aptitude
   :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m
      , DomBuilderSpace m ~ GhcjsDomSpace, PerformEvent t m
-     , MonadJSM (Performable m))
+     , MonadJSM (Performable m), HasDocument m)
   => T.Text
   -> Dynamic t Nat
   -> Dynamic t (Trait z)
   -> m ()
 aptitude aName levelDyn tDyn = elClass "li" "aptitude" $ do
-  let aDsDyn = aptitudeDice <$> (fget traitDiceSet tDyn) <*> levelDyn
+  let aDsDyn = aptitudeDice <$> levelDyn <*> (fget traitDiceSet tDyn)
   elClass "span" "name" $ text aName
   elClass "span" "value" . display $ aDsDyn
   diceCodeRoller aDsDyn False
 
-aptitudeDice :: DiceSet -> Nat -> DiceSet
-aptitudeDice ds 0 = ds & diceSetNum .~ 1 & diceSetBonus %~ (\x -> x - 4)
-aptitudeDice ds n = ds & diceSetNum .~ (toNat1 n)
+aptitudeDice :: Nat -> DiceSet -> DiceSet
+aptitudeDice 0 ds = ds & diceSetNum .~ 1 & diceSetBonus %~ (\x -> x - 4)
+aptitudeDice n ds = ds & diceSetNum .~ (toNat1 n)
 
 concentrationAptitude
   :: (MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
      , DomBuilderSpace m ~ GhcjsDomSpace, MonadJSM (Performable m)
-     , PerformEvent t m)
+     , PerformEvent t m, HasDocument m)
   => T.Text
   -> Getter a Bool
   -> Dynamic t (Concentration a)
@@ -128,7 +152,7 @@ concentrationAptitude label g cDyn tDyn = do
 pureAptitude
   :: (MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
      , DomBuilderSpace m ~ GhcjsDomSpace, MonadJSM (Performable m)
-     , PerformEvent t m)
+     , PerformEvent t m, HasDocument m)
   => T.Text
   -> Getter a Nat
   -> Dynamic t (Trait a)
@@ -139,7 +163,7 @@ pureAptitude name getter tDyn =
 trait
   :: (MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
      , DomBuilderSpace m ~ GhcjsDomSpace, PerformEvent t m
-     , MonadJSM (Performable m))
+     , MonadJSM (Performable m), HasDocument m)
   => Dynamic t s
   -> T.Text
   -> Getting (Trait a) s (Trait a)
@@ -154,7 +178,7 @@ trait traitsDyn tLabel tGetter aptitudes =
 traits
   ::(MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
     , DomBuilderSpace m ~ GhcjsDomSpace, PerformEvent t m
-    , MonadJSM (Performable m))
+    , MonadJSM (Performable m), HasDocument m)
   => Dynamic t Traits
   -> m ()
 traits traitsDyn = elClass "div" "traits" $ do
@@ -201,7 +225,7 @@ traits traitsDyn = elClass "div" "traits" $ do
       ]
     trait traitsDyn "Spirit" traitsSpirit $
       [ pureAptitude "Faith" spiritFaith
-      , pureAptitude "Guts" spiritFaith
+      , pureAptitude "Guts" spiritGuts
       ]
 
 info :: (PostBuild t m, DomBuilder t m) => Dynamic t CharacterBackground -> m ()

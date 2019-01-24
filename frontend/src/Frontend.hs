@@ -18,16 +18,18 @@ import           Obelisk.Route
 import           Reflex.Dom
 
 import           Common.CharacterSheet
+import           Common.DiceSet
 import           Common.Route
 import           Frontend.Internal        (fget)
 import           Frontend.Style
 import           Frontend.Traits          (traits)
+import           Frontend.Wounds          (wounds)
 import           Obelisk.Generated.Static
 
 info :: (PostBuild t m, DomBuilder t m) => Dynamic t CharacterBackground -> m ()
 info bgDyn = elClass "div" "info" $ do
   el "h2" $dynText (fget chrBgName bgDyn)
-  elAttr "img" (Map.fromList [("src",static @"St_Teresa.jpg"), ("width","125")]) blank
+  elAttr "img" (Map.fromList [("src",static @"St_Teresa.jpg"), ("width","160")]) blank
   el "dl" $ do
     el "dt" $ text "Occupation"
     el "dd" $ dynText (fget chrBgOccupation bgDyn)
@@ -35,6 +37,8 @@ info bgDyn = elClass "div" "info" $ do
     el "dd" $ dynText (fget chrBgHomeTown bgDyn)
     el "dt" $ text "Age"
     el "dd" $ dynText (fget (chrBgAge . to show . packed) bgDyn)
+    el "dt" $ text "Grit"
+    el "dd" $ dynText (fget (chrBgGrit . to show . packed) bgDyn)
 
 frontend :: Frontend (R FrontendRoute)
 frontend = Frontend
@@ -45,9 +49,13 @@ frontend = Frontend
       let chrDyn = constDyn gabriela
       elClass "div" "character-sheet" $ do
         elClass "div" "traits" $ do
-          traits (view chrSheetTraits <$> chrDyn)
+          traits (fget chrSheetTraits chrDyn)
         elClass "div" "effects" $ do
-          info (view chrSheetBackground <$> chrDyn)
+          info (fget chrSheetBackground chrDyn)
+          wounds
+            (fget chrSheetSize chrDyn)
+            (fget (chrSheetTraits.traitsVigor.traitDiceSet.diceSetSides.to sidesToNat.to (*2)) chrDyn)
+            (fget chrSheetLightArmor chrDyn)
         elClass "div" "spells" $ do
           el "h1" $ text "Blessings"
           blank

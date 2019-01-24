@@ -191,7 +191,7 @@ style = do
       flexGrow 2
       textAlign center
       marginLeft (em 3)
-      marginRight (em 1)
+      marginRight (em 0.5)
       height (pct 100)
       overflow auto
       display block

@@ -172,7 +172,7 @@ traits
     , MonadJSM (Performable m), HasDocument m)
   => Dynamic t Traits
   -> m ()
-traits traitsDyn = elClass "div" "traits" $ do
+traits traitsDyn = do
   el "h1" $ text "Traits"
   el "ul" $ do
     trait traitsDyn "Deftness" traitsDeftness $

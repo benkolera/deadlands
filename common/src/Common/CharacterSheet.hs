@@ -136,6 +136,7 @@ data CharacterBackground = CharacterBackground
   , _chrBgAge        :: Nat1
   , _chrBgOccupation :: Text
   , _chrBgHomeTown   :: Text
+  , _chrBgGrit       :: Nat
   } deriving (Show, Eq)
 makeLenses ''CharacterBackground
 
@@ -146,7 +147,7 @@ data CharacterSheet = CharacterSheet
   , _chrSheetBlessings   :: Set Blessings
   , _chrSheetKnacks      :: Set Knacks
   , _chrSheetSize        :: Nat1
-  , _chrSheetLightArmor  :: Nat1
+  , _chrSheetLightArmor  :: Nat
   , _chrSheetBackground  :: CharacterBackground
   } deriving (Show, Eq)
 makeLenses ''CharacterSheet
@@ -219,5 +220,6 @@ gabriela = CharacterSheet
     , _chrBgAge = 42
     , _chrBgOccupation = "Catholic Nun"
     , _chrBgHomeTown = "Paso del Norte, México"
+    , _chrBgGrit = 3
     }
   }

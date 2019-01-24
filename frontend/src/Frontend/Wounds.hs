@@ -12,8 +12,9 @@ module Frontend.Wounds where
 
 import           Data.Bool               (bool)
 import           Data.Functor            (void)
---import qualified Data.Map                   as Map
 import           Data.List.NonEmpty      (NonEmpty ((:|)))
+--import qualified Data.Map                   as Map
+import           Data.Maybe              (fromMaybe, maybe)
 import           Data.Number.Nat         (Nat)
 import           Data.Number.Nat1        (Nat1)
 import           Data.Semigroup          (Max (Max, getMax))
@@ -56,13 +57,19 @@ wounds
 wounds sizeDyn maxWindDyn lightArmorDyn = elClass "div" "wounds-tracker" $ do
   el "h2" $ text "Wounds"
   let deadDyn           = constDyn False
-  let headWoundsDyn     = constDyn (0::Nat)
-  let torsoWoundsDyn    = constDyn (0::Nat)
-  let leftArmWoundsDyn  = constDyn (0::Nat)
-  let rightArmWoundsDyn = constDyn (0::Nat)
-  let leftLegWoundsDyn  = constDyn (0::Nat)
-  let rightLegWoundsDyn = constDyn (0::Nat)
-  let maxWoundsDyn      = fmap (getMax . foldMap1 Max) . sequence $ headWoundsDyn :| []
+  let headWoundsDyn     = constDyn (1::Nat)
+  let torsoWoundsDyn    = constDyn (2::Nat)
+  let leftArmWoundsDyn  = constDyn (Just (3::Nat))
+  let rightArmWoundsDyn = constDyn (Just (4::Nat))
+  let leftLegWoundsDyn  = constDyn (Just (4::Nat))
+  let rightLegWoundsDyn = constDyn Nothing
+  let maxWoundsDyn      = fmap (getMax . foldMap1 Max) . sequence $ headWoundsDyn :|
+        [ torsoWoundsDyn
+        , fromMaybe 0 <$> leftArmWoundsDyn
+        , fromMaybe 0 <$> rightArmWoundsDyn
+        , fromMaybe 0 <$> leftLegWoundsDyn
+        , fromMaybe 0 <$> rightLegWoundsDyn
+        ]
   let windDyn        = maxWindDyn
   -- let woundE       = never
 
@@ -70,10 +77,10 @@ wounds sizeDyn maxWindDyn lightArmorDyn = elClass "div" "wounds-tracker" $ do
     let wounds' = elClass "div" "wounds" $ do
           elDynAttr "div" (("class" =:) . woundCssClass Head     <$> headWoundsDyn)     blank
           elDynAttr "div" (("class" =:) . woundCssClass Torso    <$> torsoWoundsDyn)    blank
-          elDynAttr "div" (("class" =:) . woundCssClass LeftArm  <$> leftArmWoundsDyn)  blank
-          elDynAttr "div" (("class" =:) . woundCssClass RightArm <$> rightArmWoundsDyn) blank
-          elDynAttr "div" (("class" =:) . woundCssClass LeftLeg  <$> leftLegWoundsDyn)  blank
-          elDynAttr "div" (("class" =:) . woundCssClass RightLeg <$> rightLegWoundsDyn) blank
+          elDynAttr "div" (("class" =:) . woundCssClass LeftArm . fromMaybe 5 <$> leftArmWoundsDyn)  blank
+          elDynAttr "div" (("class" =:) . woundCssClass RightArm . fromMaybe 5 <$> rightArmWoundsDyn) blank
+          elDynAttr "div" (("class" =:) . woundCssClass LeftLeg . fromMaybe 5 <$> leftLegWoundsDyn)  blank
+          elDynAttr "div" (("class" =:) . woundCssClass RightLeg . fromMaybe 5 <$> rightLegWoundsDyn) blank
     let dead = elClass "div" "dead" $ blank
     void $ dyn (bool wounds' dead <$> deadDyn)
   elClass "div" "physical-deets" $ do
@@ -84,8 +91,10 @@ wounds sizeDyn maxWindDyn lightArmorDyn = elClass "div" "wounds-tracker" $ do
         text "/"
         display maxWindDyn
     el "div" $ do
-      el "span" $ text "Highest Wounds: "
-      el "span" $ display maxWoundsDyn
+      el "span" $ text "Wound Modifier: "
+      el "span" $ do
+        display $ ((0::Integer)-) . fromIntegral <$> maxWoundsDyn
+        dynText $ maybe "" (\d -> "(" <> d <> ")") . woundDesc <$> maxWoundsDyn
     el "div" $ do
       el "span" $ text "Light Armor: "
       el "span" $ display lightArmorDyn

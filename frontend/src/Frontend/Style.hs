@@ -187,6 +187,76 @@ style = do
             "margin-inline-start" -: "0.5em"
         marginBottom (rem 3)
 
+    ".wounds-container" ? do
+      width (em 20)
+      height (em 20)
+      padding (em 1) (em 0) (em 2) (em 0)
+      margin auto auto auto auto
+
+      let woundTracker imgSrc = do
+            backgroundImage $ url imgSrc
+            width (em 20)
+            height (em 20)
+            backgroundPosition (placed sideCenter sideCenter)
+            backgroundRepeat noRepeat
+            backgroundSize contain
+
+      let limb ln lsrc hsrc ssrc csrc msrc = do
+            (star # (byClass ln)) ? do
+              position absolute
+              top (px 0)
+              bottom (px 0)
+              ".light" & woundTracker lsrc
+              ".heavy" & woundTracker hsrc
+              ".serious" & woundTracker ssrc
+              ".critical" & woundTracker csrc
+              ".maimed" & woundTracker msrc
+
+      ".dead" ? do
+        woundTracker (Static.static @"death.svg")
+        margin auto auto auto auto
+        position relative
+      ".wounds" ? do
+        woundTracker (Static.static @"human-guidelines.png")
+        margin auto auto auto auto
+        position relative
+        limb "head"
+          (Static.static @"head-light.png")
+          (Static.static @"head-heavy.png")
+          (Static.static @"head-serious.png")
+          (Static.static @"head-critical.png")
+          (Static.static @"head-maimed.png")
+        limb "torso"
+          (Static.static @"torso-light.png")
+          (Static.static @"torso-heavy.png")
+          (Static.static @"torso-serious.png")
+          (Static.static @"torso-critical.png")
+          (Static.static @"torso-maimed.png")
+        limb "larm"
+          (Static.static @"larm-light.png")
+          (Static.static @"larm-heavy.png")
+          (Static.static @"larm-serious.png")
+          (Static.static @"larm-critical.png")
+          (Static.static @"larm-maimed.png")
+        limb "rarm"
+          (Static.static @"rarm-light.png")
+          (Static.static @"rarm-heavy.png")
+          (Static.static @"rarm-serious.png")
+          (Static.static @"rarm-critical.png")
+          (Static.static @"rarm-maimed.png")
+        limb "lleg"
+          (Static.static @"lleg-light.png")
+          (Static.static @"lleg-heavy.png")
+          (Static.static @"lleg-serious.png")
+          (Static.static @"lleg-critical.png")
+          (Static.static @"lleg-maimed.png")
+        limb "rleg"
+          (Static.static @"rleg-light.png")
+          (Static.static @"rleg-heavy.png")
+          (Static.static @"rleg-serious.png")
+          (Static.static @"rleg-critical.png")
+          (Static.static @"rleg-maimed.png")
+
     ".spells" ? do
       flexGrow 2
       textAlign center

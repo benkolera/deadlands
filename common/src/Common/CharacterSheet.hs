@@ -1,5 +1,6 @@
-{-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 module Common.CharacterSheet where
 
@@ -11,10 +12,13 @@ import           Data.Set         (Set)
 import qualified Data.Set         as Set
 import           Data.Text        (Text)
 
+import           Control.Lens
+import           Data.Number.Nat1 (toNat1)
+
 import           Common.DiceSet
 
-data Concentration a = Concentration
-  { _concentrationLevel     :: Nat
+data Concentration l a = Concentration
+  { _concentrationLevel     :: l
   , _concentrationAptitudes :: a
   } deriving (Eq, Show)
 makeLenses ''Concentration
@@ -34,76 +38,83 @@ data QuickLoadConcentrations = QuickLoadConcentrations
   } deriving (Eq, Show)
 makeLenses ''QuickLoadConcentrations
 
-data DeftnessAptitudes = DeftnessAptitudes
-  { _deftnessShootin :: Concentration ShootinConcentrations
+data QuickDrawConcentrations = QuickDrawConcentrations
+  { _quickDrawShotgun :: Bool
+  } deriving (Eq, Show)
+makeLenses ''QuickDrawConcentrations
+
+data DeftnessAptitudes l = DeftnessAptitudes
+  { _deftnessShootin :: Concentration l ShootinConcentrations
   } deriving (Eq, Show)
 makeLenses ''DeftnessAptitudes
 
-data NimblenessAptitudes = NimblenessAptitudes
-  { _nimblenessFightin    :: Concentration FightinConcentrations
-  , _nimblenessClimbin    :: Nat
-  , _nimblenessDodge      :: Nat
-  , _nimblenessHorseRidin :: Nat
+data NimblenessAptitudes l = NimblenessAptitudes
+  { _nimblenessFightin    :: Concentration l FightinConcentrations
+  , _nimblenessClimbin    :: l
+  , _nimblenessDodge      :: l
+  , _nimblenessHorseRidin :: l
   } deriving (Eq, Show)
 makeLenses ''NimblenessAptitudes
 
-data QuicknessAptitudes = QuicknessAptitudes
-  { _quicknessQuickLoad :: Concentration QuickLoadConcentrations
+data QuicknessAptitudes l = QuicknessAptitudes
+  { _quicknessQuickLoad :: Concentration l QuickLoadConcentrations
+  , _quicknessQuickDraw :: Concentration l QuickDrawConcentrations
   } deriving (Eq, Show)
 makeLenses ''QuicknessAptitudes
 
-data StrengthAptitudes = StrengthAptitudes deriving (Eq, Show)
-data VigorAptitudes = VigorAptitudes deriving (Eq, Show)
+data StrengthAptitudes l = StrengthAptitudes deriving (Eq, Show)
+data VigorAptitudes l = VigorAptitudes deriving (Eq, Show)
 
-data CognitionAptitudes = CognitionAptitudes
-  { _cognitionScruitinize :: Nat
-  , _cognitionSearch      :: Nat
+data CognitionAptitudes l = CognitionAptitudes
+  { _cognitionScruitinize :: l
+  , _cognitionSearch      :: l
+  , _cognitionTrackin     :: l
   } deriving (Eq, Show)
 makeLenses ''CognitionAptitudes
 
-data KnowledgeAptitudes = KnowledgeAptitudes
-  { _knowledgeLatin     :: Nat
-  , _knowledgeEnglish   :: Nat
-  , _knowledgeSpanish   :: Nat
-  , _knowledgeOccult    :: Nat
-  , _knowledgeTheology  :: Nat
-  , _knowledgeChihuahua :: Nat
+data KnowledgeAptitudes l = KnowledgeAptitudes
+  { _knowledgeLatin     :: l
+  , _knowledgeEnglish   :: l
+  , _knowledgeSpanish   :: l
+  , _knowledgeOccult    :: l
+  , _knowledgeTheology  :: l
+  , _knowledgeChihuahua :: l
   } deriving (Eq, Show)
 makeLenses ''KnowledgeAptitudes
 
-data MienAptitudes = MienAptitudes
-  { _mienOverawe :: Nat
+data MienAptitudes l = MienAptitudes
+  { _mienOverawe :: l
   } deriving (Eq, Show)
 makeLenses ''MienAptitudes
 
-data SmartsAptitudes = SmartsAptitudes
-  { _smartsStreetwise :: Nat
+data SmartsAptitudes l = SmartsAptitudes
+  { _smartsStreetwise :: l
   } deriving (Eq, Show)
 makeLenses ''SmartsAptitudes
 
-data SpiritAptitudes = SpiritAptitudes
-  { _spiritGuts  :: Nat
-  , _spiritFaith :: Nat
+data SpiritAptitudes l = SpiritAptitudes
+  { _spiritGuts  :: l
+  , _spiritFaith :: l
   } deriving (Eq, Show)
 makeLenses ''SpiritAptitudes
 
-data Trait a = Trait
+data Trait l a = Trait
   { _traitDiceSet   :: DiceSet
-  , _traitAptitudes :: a
+  , _traitAptitudes :: a l
   } deriving (Eq, Show)
 makeLenses ''Trait
 
-data Traits = Traits
-  { _traitsDeftness   :: Trait DeftnessAptitudes
-  , _traitsNimbleness :: Trait NimblenessAptitudes
-  , _traitsQuickness  :: Trait QuicknessAptitudes
-  , _traitsStrength   :: Trait StrengthAptitudes
-  , _traitsVigor      :: Trait VigorAptitudes
-  , _traitsCognition  :: Trait CognitionAptitudes
-  , _traitsKnowledge  :: Trait KnowledgeAptitudes
-  , _traitsMien       :: Trait MienAptitudes
-  , _traitsSmarts     :: Trait SmartsAptitudes
-  , _traitsSpirit     :: Trait SpiritAptitudes
+data Traits l = Traits
+  { _traitsDeftness   :: Trait l DeftnessAptitudes
+  , _traitsNimbleness :: Trait l NimblenessAptitudes
+  , _traitsQuickness  :: Trait l QuicknessAptitudes
+  , _traitsStrength   :: Trait l StrengthAptitudes
+  , _traitsVigor      :: Trait l VigorAptitudes
+  , _traitsCognition  :: Trait l CognitionAptitudes
+  , _traitsKnowledge  :: Trait l KnowledgeAptitudes
+  , _traitsMien       :: Trait l MienAptitudes
+  , _traitsSmarts     :: Trait l SmartsAptitudes
+  , _traitsSpirit     :: Trait l SpiritAptitudes
   } deriving (Eq, Show)
 makeLenses ''Traits
 
@@ -140,8 +151,8 @@ data CharacterBackground = CharacterBackground
   } deriving (Show, Eq)
 makeLenses ''CharacterBackground
 
-data CharacterSheet = CharacterSheet
-  { _chrSheetTraits      :: Traits
+data CharacterSheet l = CharacterSheet
+  { _chrSheetTraits      :: Traits l
   , _chrSheetEdges       :: Set Edges
   , _chrSheetHinderances :: Set Hinderances
   , _chrSheetBlessings   :: Set Blessings
@@ -152,7 +163,81 @@ data CharacterSheet = CharacterSheet
   } deriving (Show, Eq)
 makeLenses ''CharacterSheet
 
-gabriela :: CharacterSheet
+aptitudeDice :: DiceSet -> Nat -> DiceSet
+aptitudeDice ds 0 = ds & diceSetNum .~ 1 & diceSetBonus %~ (\x -> x - 4)
+aptitudeDice ds n = ds & diceSetNum .~ (toNat1 n)
+
+-- TODO: This is shite
+calculateDiceSets :: CharacterSheet Nat -> CharacterSheet DiceSet
+calculateDiceSets = over chrSheetTraits calculateTraitDiceSets
+  where
+    calculateTraitDiceSets :: Traits Nat -> Traits DiceSet
+    calculateTraitDiceSets old = Traits
+      { _traitsDeftness = old ^. traitsDeftness .to calculateDeftnessDiceSets
+      , _traitsNimbleness = old ^. traitsNimbleness .to calculateNimblenessDiceSets
+      , _traitsQuickness = old ^. traitsQuickness .to calculateQuicknessDiceSets
+      , _traitsStrength = old ^. traitsStrength .to calculateStrengthDiceSets
+      , _traitsVigor = old ^. traitsVigor .to calculateVigorDiceSets
+      , _traitsCognition = old ^. traitsCognition .to calculateCognitionDiceSets
+      , _traitsKnowledge = old ^. traitsKnowledge .to calculateKnowledgeDiceSets
+      , _traitsMien = old ^. traitsMien .to calculateMienDiceSets
+      , _traitsSmarts = old ^. traitsSmarts .to calculateSmartsDiceSets
+      , _traitsSpirit = old ^. traitsSpirit .to calculateSpiritDiceSets
+      }
+    calculateDeftnessDiceSets :: Trait Nat DeftnessAptitudes -> Trait DiceSet DeftnessAptitudes
+    calculateDeftnessDiceSets (Trait ds as) = Trait ds $ DeftnessAptitudes
+      { _deftnessShootin = concentrationDiceSet deftnessShootin ds as
+      }
+    calculateNimblenessDiceSets :: Trait Nat NimblenessAptitudes -> Trait DiceSet NimblenessAptitudes
+    calculateNimblenessDiceSets (Trait ds as ) = Trait ds $ NimblenessAptitudes
+      { _nimblenessFightin    = concentrationDiceSet nimblenessFightin ds as
+      , _nimblenessClimbin    = aptitudeDiceSet nimblenessClimbin ds as
+      , _nimblenessHorseRidin = aptitudeDiceSet nimblenessHorseRidin ds as
+      , _nimblenessDodge      = aptitudeDiceSet nimblenessDodge ds as
+      }
+    calculateQuicknessDiceSets :: Trait Nat QuicknessAptitudes -> Trait DiceSet QuicknessAptitudes
+    calculateQuicknessDiceSets (Trait ds as) = Trait ds $ QuicknessAptitudes
+      { _quicknessQuickLoad = concentrationDiceSet quicknessQuickLoad ds as
+      , _quicknessQuickDraw = concentrationDiceSet quicknessQuickDraw ds as
+      }
+    calculateStrengthDiceSets :: Trait Nat StrengthAptitudes -> Trait DiceSet StrengthAptitudes
+    calculateStrengthDiceSets (Trait ds _) = Trait ds StrengthAptitudes
+    calculateVigorDiceSets :: Trait Nat VigorAptitudes -> Trait DiceSet VigorAptitudes
+    calculateVigorDiceSets (Trait ds _) = Trait ds VigorAptitudes
+    calculateCognitionDiceSets :: Trait Nat CognitionAptitudes -> Trait DiceSet CognitionAptitudes
+    calculateCognitionDiceSets (Trait ds as) = Trait ds $ CognitionAptitudes
+      { _cognitionScruitinize = aptitudeDiceSet cognitionScruitinize ds as
+      , _cognitionSearch = aptitudeDiceSet cognitionSearch ds as
+      , _cognitionTrackin = aptitudeDiceSet cognitionTrackin ds as
+      }
+    calculateKnowledgeDiceSets :: Trait Nat KnowledgeAptitudes -> Trait DiceSet KnowledgeAptitudes
+    calculateKnowledgeDiceSets (Trait ds as) = Trait ds $ KnowledgeAptitudes
+      { _knowledgeTheology = aptitudeDiceSet knowledgeTheology ds as
+      , _knowledgeLatin = aptitudeDiceSet knowledgeLatin ds as
+      , _knowledgeEnglish = aptitudeDiceSet knowledgeEnglish ds as
+      , _knowledgeSpanish = aptitudeDiceSet knowledgeSpanish ds as
+      , _knowledgeOccult = aptitudeDiceSet knowledgeOccult ds as
+      , _knowledgeChihuahua = aptitudeDiceSet knowledgeChihuahua ds as
+      }
+    calculateMienDiceSets :: Trait Nat MienAptitudes -> Trait DiceSet MienAptitudes
+    calculateMienDiceSets (Trait ds as) = Trait ds $ MienAptitudes
+      { _mienOverawe = aptitudeDiceSet mienOverawe ds as
+      }
+    calculateSmartsDiceSets :: Trait Nat SmartsAptitudes -> Trait DiceSet SmartsAptitudes
+    calculateSmartsDiceSets (Trait ds as) = Trait ds $ SmartsAptitudes
+      { _smartsStreetwise = aptitudeDiceSet smartsStreetwise ds as
+      }
+    calculateSpiritDiceSets :: Trait Nat SpiritAptitudes -> Trait DiceSet SpiritAptitudes
+    calculateSpiritDiceSets (Trait ds as) = Trait ds $ SpiritAptitudes
+      { _spiritFaith = aptitudeDiceSet spiritFaith ds as
+      , _spiritGuts = aptitudeDiceSet spiritGuts ds as
+      }
+    concentrationDiceSet :: Getter (a Nat) (Concentration Nat b) -> DiceSet -> a Nat -> Concentration DiceSet b
+    concentrationDiceSet g ds as = (as ^. g) & concentrationLevel %~ aptitudeDice ds
+    aptitudeDiceSet :: Getter (a Nat) Nat -> DiceSet -> a Nat -> DiceSet
+    aptitudeDiceSet g ds = view $ g . to (aptitudeDice ds)
+
+gabriela :: CharacterSheet Nat
 gabriela = CharacterSheet
   { _chrSheetTraits = Traits
     { _traitsDeftness = Trait (DiceSet D8 4 0) $ DeftnessAptitudes
@@ -172,12 +257,16 @@ gabriela = CharacterSheet
       { _quicknessQuickLoad = Concentration 1 $ QuickLoadConcentrations
         { _quickLoadShotgun = True
         }
+      , _quicknessQuickDraw = Concentration 1 $ QuickDrawConcentrations
+        { _quickDrawShotgun = True
+        }
       }
     , _traitsStrength = Trait (DiceSet D6 4 0) $ StrengthAptitudes
     , _traitsVigor = Trait (DiceSet D12 3 0) $ VigorAptitudes
     , _traitsCognition = Trait (DiceSet D12 4 0) $ CognitionAptitudes
       { _cognitionScruitinize = 5
       , _cognitionSearch      = 4
+      , _cognitionTrackin     = 3
       }
     , _traitsKnowledge = Trait (DiceSet D8 3 0) $ KnowledgeAptitudes
       { _knowledgeLatin = 2

@@ -96,7 +96,7 @@ wounds
   -> m (Dynamic t Nat)
 wounds sizeDyn maxWindDyn lightArmorDyn limbs = elClass "div" "wounds-tracker" $ mdo
   el "h2" $ text "Wounds"
-  let dmgSizeE = attachPromptlyDyn sizeDyn dmgE
+  let dmgSizeE = attach (current sizeDyn) dmgE
   woundsHeadDyn     <- foldDyn (changeWounds Head) (limbs^.limbsHead) dmgSizeE
   woundsTorsoDyn    <- foldDyn (changeWounds Torso) (limbs^.limbsTorso) $ dmgSizeE
   woundsLeftArmDyn  <- foldDyn (changeWoundsLimb LeftArm) (limbs^.limbsLeftArm) $ dmgSizeE
@@ -104,7 +104,7 @@ wounds sizeDyn maxWindDyn lightArmorDyn limbs = elClass "div" "wounds-tracker" $
   woundsLeftLegDyn  <- foldDyn (changeWoundsLimb LeftLeg) (limbs^.limbsLeftLeg) dmgSizeE
   woundsRightLegDyn <- foldDyn (changeWoundsLimb RightLeg) (limbs^.limbsRightLeg) dmgSizeE
   windMaxInit       <- sample . current $ maxWindDyn
-  windDyn           <- foldDyn changeWind (fromNat1 windMaxInit) $ attachPromptlyDyn maxWindDyn dmgE
+  windDyn           <- foldDyn changeWind (fromNat1 windMaxInit) $ attach (current maxWindDyn) dmgE
   let
     maxWounds = fmap (getMax . foldMap1 Max) . sequence
     maxWoundsDyn = maxWounds $ woundsHeadDyn :|
@@ -166,5 +166,5 @@ wounds sizeDyn maxWindDyn lightArmorDyn limbs = elClass "div" "wounds-tracker" $
         (maybe ("disabled" =: "") (const Map.empty) <$> damageDyn )
         (text "Apply")
       pure $ domEvent Click bElt
-    pure . fmapMaybe id $ tagPromptlyDyn damageDyn applyE
-  pure maxWoundsDyn
+    pure . fmapMaybe id $ (current damageDyn) <@ applyE
+  pure $ maxWoundsDyn

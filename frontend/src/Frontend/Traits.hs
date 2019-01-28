@@ -15,8 +15,6 @@ import           Control.Monad.Fix          (MonadFix)
 import           Data.Bool                  (bool)
 import           Data.Foldable              (traverse_)
 import qualified Data.Map                   as Map
-import           Data.Number.Nat            (Nat)
-import           Data.Number.Nat1           (toNat1)
 import qualified Data.Text                  as T
 import qualified GHCJS.DOM.Document         as JsDocument
 import qualified GHCJS.DOM.HTMLInputElement as JsInput
@@ -44,16 +42,16 @@ traitName n dsDyn = do
 concentration
   :: (PostBuild t m, DomBuilder t m)
   => T.Text
-  -> Getter a (Concentration b)
-  -> [Dynamic t (Concentration b) -> Dynamic t (Trait a) -> m ()]
-  -> Dynamic t (Trait a)
+  -> Getter (a DiceSet) (Concentration DiceSet b)
+  -> [Dynamic t (Concentration DiceSet b) -> m ()]
+  -> Dynamic t (Trait DiceSet a)
   -> m ()
 concentration cn getter childLis tDyn = do
   el "li" $ do
     text cn
     elClass "ul" "concentration" $ do
       let cDyn = fget (traitAptitudes.getter) tDyn
-      traverse_ (\f -> f cDyn tDyn) childLis
+      traverse_ ($ cDyn) childLis
 
 diceCodeRoller
   :: (MonadFix m, MonadHold t m, DomBuilder t m, PostBuild t m, MonadJSM (Performable m)
@@ -76,7 +74,7 @@ diceCodeRoller tdsDyn forTrait = do
             & textInputConfig_attributes   .~ (constDyn (Map.fromList [("min","1"),("class","tn-input")]))
         let tnDyn = read . T.unpack <$> (tn^.textInput_value)
         elClass "ul" "dice-codes" $ do
-          when forTrait . el "li" $ copyPasta "Untrained" tnDyn (aptitudeDice 0 <$> tdsDyn)
+          when forTrait . el "li" $ copyPasta "Untrained" tnDyn tdsDyn
           el "li" $ copyPasta "Normal" tnDyn tdsDyn
         button "close"
     pure ()
@@ -108,18 +106,12 @@ aptitude
      , DomBuilderSpace m ~ GhcjsDomSpace, PerformEvent t m
      , MonadJSM (Performable m), HasDocument m)
   => T.Text
-  -> Dynamic t Nat
-  -> Dynamic t (Trait z)
+  -> Dynamic t DiceSet
   -> m ()
-aptitude aName levelDyn tDyn = elClass "li" "aptitude" $ do
-  let aDsDyn = aptitudeDice <$> levelDyn <*> (fget traitDiceSet tDyn)
+aptitude aName dsDyn = elClass "li" "aptitude" $ do
   elClass "span" "name" $ text aName
-  elClass "span" "value" . display $ aDsDyn
-  diceCodeRoller aDsDyn False
-
-aptitudeDice :: Nat -> DiceSet -> DiceSet
-aptitudeDice 0 ds = ds & diceSetNum .~ 1 & diceSetBonus %~ (\x -> x - 4)
-aptitudeDice n ds = ds & diceSetNum .~ (toNat1 n)
+  elClass "span" "value" . display $ dsDyn
+  diceCodeRoller dsDyn False
 
 concentrationAptitude
   :: (MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
@@ -127,29 +119,26 @@ concentrationAptitude
      , PerformEvent t m, HasDocument m)
   => T.Text
   -> Getter a Bool
-  -> Dynamic t (Concentration a)
-  -> Dynamic t (Trait z)
+  -> Dynamic t (Concentration DiceSet a)
   -> m ()
-concentrationAptitude label g cDyn tDyn = do
+concentrationAptitude label g cDyn = do
   let alDyn = (\c ->
-                bool
-                0
-                (c^.concentrationLevel)
-                (c^.concentrationAptitudes.g)
-             )
+                 let ds = c^.concentrationLevel
+                 in bool (ds & diceSetNum .~ 1) ds (c^.concentrationAptitudes.g)
+              )
         <$> cDyn
-  aptitude label alDyn tDyn
+  aptitude label alDyn
 
 pureAptitude
   :: (MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
      , DomBuilderSpace m ~ GhcjsDomSpace, MonadJSM (Performable m)
      , PerformEvent t m, HasDocument m)
   => T.Text
-  -> Getter a Nat
-  -> Dynamic t (Trait a)
+  -> Getter (a DiceSet) DiceSet
+  -> Dynamic t (Trait DiceSet a)
   -> m ()
 pureAptitude name getter tDyn =
-  aptitude name (fget (traitAptitudes.getter) tDyn) tDyn
+  aptitude name (fget (traitAptitudes.getter) tDyn)
 
 trait
   :: (MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
@@ -157,8 +146,8 @@ trait
      , MonadJSM (Performable m), HasDocument m)
   => Dynamic t s
   -> T.Text
-  -> Getting (Trait a) s (Trait a)
-  -> [Dynamic t (Trait a) -> m ()]
+  -> Getter s (Trait DiceSet a)
+  -> [Dynamic t (Trait DiceSet a) -> m ()]
   -> m ()
 trait traitsDyn tLabel tGetter aptitudes =
   elClass "li" "trait" $ do
@@ -167,10 +156,11 @@ trait traitsDyn tLabel tGetter aptitudes =
     elClass "ul" "aptitudes" $ traverse_ ($ tDyn) aptitudes
 
 traits
-  ::(MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
-    , DomBuilderSpace m ~ GhcjsDomSpace, PerformEvent t m
-    , MonadJSM (Performable m), HasDocument m)
-  => Dynamic t Traits
+  :: ( MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
+     , DomBuilderSpace m ~ GhcjsDomSpace, PerformEvent t m
+     , MonadJSM (Performable m), HasDocument m
+     )
+  => Dynamic t (Traits DiceSet)
   -> m ()
 traits traitsDyn = do
   el "h1" $ text "Traits"

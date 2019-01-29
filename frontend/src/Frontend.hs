@@ -25,6 +25,7 @@ import           Common.Route
 import           Frontend.Internal        (fget, diffDyn)
 import           Frontend.Style
 import           Frontend.Traits          (traits)
+import           Frontend.Spells          (edges)
 import           Frontend.Wounds          (Limbs (Limbs), wounds)
 import           Obelisk.Generated.Static
 
@@ -69,8 +70,7 @@ frontend = Frontend
             (fget chrSheetLightArmor chrDyn)
             (Limbs 0 0 (Just 0) (Just 0) (Just 0) (Just 0))
         elClass "div" "spells" $ do
-          el "h1" $ text "Blessings"
-          blank
+          edges (fget chrSheetEdges chrDyn)
         pure (woundEffects maxWoundsDyn)
       pure ()
   }

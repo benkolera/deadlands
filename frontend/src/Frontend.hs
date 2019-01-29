@@ -47,7 +47,7 @@ woundEffects :: Reflex t => Dynamic t Nat -> Event t (Endo (CharacterSheet DiceS
 woundEffects = diffDyn $ \old new -> Endo $ \c -> applyWounds c (fromNat new - fromNat old)
 
 applyWounds :: CharacterSheet DiceSet -> Integer -> CharacterSheet DiceSet
-applyWounds c wl = c & chrSheetTraits.traitsDeftness.traitAptitudes.deftnessShootin.concentrationLevel.diceSetBonus %~ (\x -> x - wl)
+applyWounds c wl = c & chrSheetTraits %~ mapTraitsDiceSet (over diceSetBonus (\x -> x - wl))
 
 frontend :: Frontend (R FrontendRoute)
 frontend = Frontend

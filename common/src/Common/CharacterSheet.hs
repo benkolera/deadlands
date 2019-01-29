@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveFunctor     #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
 {-# LANGUAGE TemplateHaskell   #-}
@@ -17,11 +18,14 @@ import           Data.Number.Nat1 (toNat1)
 
 import           Common.DiceSet
 
-data Concentration l a = Concentration
+data Concentration a l = Concentration
   { _concentrationLevel     :: l
   , _concentrationAptitudes :: a
   } deriving (Eq, Show)
 makeLenses ''Concentration
+
+instance Functor (Concentration a) where
+  fmap = over concentrationLevel
 
 data ShootinConcentrations = ShootinConcentrations
   { _shootinShotgun :: Bool
@@ -44,32 +48,32 @@ data QuickDrawConcentrations = QuickDrawConcentrations
 makeLenses ''QuickDrawConcentrations
 
 data DeftnessAptitudes l = DeftnessAptitudes
-  { _deftnessShootin :: Concentration l ShootinConcentrations
-  } deriving (Eq, Show)
+  { _deftnessShootin :: Concentration ShootinConcentrations l
+  } deriving (Eq, Show, Functor)
 makeLenses ''DeftnessAptitudes
 
 data NimblenessAptitudes l = NimblenessAptitudes
-  { _nimblenessFightin    :: Concentration l FightinConcentrations
+  { _nimblenessFightin    :: Concentration FightinConcentrations l
   , _nimblenessClimbin    :: l
   , _nimblenessDodge      :: l
   , _nimblenessHorseRidin :: l
-  } deriving (Eq, Show)
+  } deriving (Eq, Show, Functor)
 makeLenses ''NimblenessAptitudes
 
 data QuicknessAptitudes l = QuicknessAptitudes
-  { _quicknessQuickLoad :: Concentration l QuickLoadConcentrations
-  , _quicknessQuickDraw :: Concentration l QuickDrawConcentrations
-  } deriving (Eq, Show)
+  { _quicknessQuickLoad :: Concentration QuickLoadConcentrations l
+  , _quicknessQuickDraw :: Concentration QuickDrawConcentrations l
+  } deriving (Eq, Show, Functor)
 makeLenses ''QuicknessAptitudes
 
-data StrengthAptitudes l = StrengthAptitudes deriving (Eq, Show)
-data VigorAptitudes l = VigorAptitudes deriving (Eq, Show)
+data StrengthAptitudes l = StrengthAptitudes deriving (Eq, Show, Functor)
+data VigorAptitudes l = VigorAptitudes deriving (Eq, Show, Functor)
 
 data CognitionAptitudes l = CognitionAptitudes
   { _cognitionScruitinize :: l
   , _cognitionSearch      :: l
   , _cognitionTrackin     :: l
-  } deriving (Eq, Show)
+  } deriving (Eq, Show, Functor)
 makeLenses ''CognitionAptitudes
 
 data KnowledgeAptitudes l = KnowledgeAptitudes
@@ -79,44 +83,64 @@ data KnowledgeAptitudes l = KnowledgeAptitudes
   , _knowledgeOccult    :: l
   , _knowledgeTheology  :: l
   , _knowledgeChihuahua :: l
-  } deriving (Eq, Show)
+  } deriving (Eq, Show, Functor)
 makeLenses ''KnowledgeAptitudes
 
 data MienAptitudes l = MienAptitudes
   { _mienOverawe :: l
-  } deriving (Eq, Show)
+  } deriving (Eq, Show, Functor)
 makeLenses ''MienAptitudes
 
 data SmartsAptitudes l = SmartsAptitudes
   { _smartsStreetwise :: l
-  } deriving (Eq, Show)
+  } deriving (Eq, Show, Functor)
 makeLenses ''SmartsAptitudes
 
 data SpiritAptitudes l = SpiritAptitudes
   { _spiritGuts  :: l
   , _spiritFaith :: l
-  } deriving (Eq, Show)
+  } deriving (Eq, Show, Functor)
 makeLenses ''SpiritAptitudes
 
-data Trait l a = Trait
+data Trait a l = Trait
   { _traitDiceSet   :: DiceSet
   , _traitAptitudes :: a l
   } deriving (Eq, Show)
 makeLenses ''Trait
 
+mapTraitDiceSet :: Functor a => (DiceSet -> DiceSet) -> Trait a DiceSet -> Trait a DiceSet
+mapTraitDiceSet f (Trait ds as) = Trait (f ds) (fmap f as)
+
 data Traits l = Traits
-  { _traitsDeftness   :: Trait l DeftnessAptitudes
-  , _traitsNimbleness :: Trait l NimblenessAptitudes
-  , _traitsQuickness  :: Trait l QuicknessAptitudes
-  , _traitsStrength   :: Trait l StrengthAptitudes
-  , _traitsVigor      :: Trait l VigorAptitudes
-  , _traitsCognition  :: Trait l CognitionAptitudes
-  , _traitsKnowledge  :: Trait l KnowledgeAptitudes
-  , _traitsMien       :: Trait l MienAptitudes
-  , _traitsSmarts     :: Trait l SmartsAptitudes
-  , _traitsSpirit     :: Trait l SpiritAptitudes
+  { _traitsDeftness   :: Trait DeftnessAptitudes l
+  , _traitsNimbleness :: Trait NimblenessAptitudes l
+  , _traitsQuickness  :: Trait QuicknessAptitudes l
+  , _traitsStrength   :: Trait StrengthAptitudes l
+  , _traitsVigor      :: Trait VigorAptitudes l
+  , _traitsCognition  :: Trait CognitionAptitudes l
+  , _traitsKnowledge  :: Trait KnowledgeAptitudes l
+  , _traitsMien       :: Trait MienAptitudes l
+  , _traitsSmarts     :: Trait SmartsAptitudes l
+  , _traitsSpirit     :: Trait SpiritAptitudes l
   } deriving (Eq, Show)
 makeLenses ''Traits
+
+-- This can't be a functor because it only makes sense to map on a CharSheet
+-- that has been expanded to dicesets. Because there are dicesets in this structure
+-- that are independent of the type param, it's best to leave this bit specialised, imo.
+mapTraitsDiceSet :: (DiceSet -> DiceSet) -> Traits DiceSet -> Traits DiceSet
+mapTraitsDiceSet f old = Traits
+    { _traitsDeftness = old ^. traitsDeftness .to (mapTraitDiceSet f)
+    , _traitsNimbleness = old ^. traitsNimbleness .to (mapTraitDiceSet f)
+    , _traitsQuickness = old ^. traitsQuickness .to (mapTraitDiceSet f)
+    , _traitsStrength = old ^. traitsStrength .to (mapTraitDiceSet f)
+    , _traitsVigor = old ^. traitsVigor .to (mapTraitDiceSet f)
+    , _traitsCognition = old ^. traitsCognition .to (mapTraitDiceSet f)
+    , _traitsKnowledge = old ^. traitsKnowledge .to (mapTraitDiceSet f)
+    , _traitsMien = old ^. traitsMien .to  (mapTraitDiceSet f)
+    , _traitsSmarts = old ^. traitsSmarts .to (mapTraitDiceSet f)
+    , _traitsSpirit = old ^. traitsSpirit .to (mapTraitDiceSet f)
+    }
 
 data Edges = ArcaneBlessed | Brave | LevelHeaded | NervesOfSteel | TheStare
   deriving (Eq, Ord, Show)
@@ -167,75 +191,23 @@ aptitudeDice :: DiceSet -> Nat -> DiceSet
 aptitudeDice ds 0 = ds & diceSetNum .~ 1 & diceSetBonus %~ (\x -> x - 4)
 aptitudeDice ds n = ds & diceSetNum .~ (toNat1 n)
 
--- TODO: This is shite
 calculateDiceSets :: CharacterSheet Nat -> CharacterSheet DiceSet
-calculateDiceSets = over chrSheetTraits calculateTraitDiceSets
+calculateDiceSets = over chrSheetTraits calculateTraitsDiceSets
   where
-    calculateTraitDiceSets :: Traits Nat -> Traits DiceSet
-    calculateTraitDiceSets old = Traits
-      { _traitsDeftness = old ^. traitsDeftness .to calculateDeftnessDiceSets
-      , _traitsNimbleness = old ^. traitsNimbleness .to calculateNimblenessDiceSets
-      , _traitsQuickness = old ^. traitsQuickness .to calculateQuicknessDiceSets
-      , _traitsStrength = old ^. traitsStrength .to calculateStrengthDiceSets
-      , _traitsVigor = old ^. traitsVigor .to calculateVigorDiceSets
-      , _traitsCognition = old ^. traitsCognition .to calculateCognitionDiceSets
-      , _traitsKnowledge = old ^. traitsKnowledge .to calculateKnowledgeDiceSets
-      , _traitsMien = old ^. traitsMien .to calculateMienDiceSets
-      , _traitsSmarts = old ^. traitsSmarts .to calculateSmartsDiceSets
-      , _traitsSpirit = old ^. traitsSpirit .to calculateSpiritDiceSets
+    calculateTraitsDiceSets old = Traits
+      { _traitsDeftness = old ^. traitsDeftness . to calculateTraitDiceSets
+      , _traitsNimbleness = old ^. traitsNimbleness .to calculateTraitDiceSets
+      , _traitsQuickness = old ^. traitsQuickness . to calculateTraitDiceSets
+      , _traitsStrength = old ^. traitsStrength. to calculateTraitDiceSets
+      , _traitsVigor = old ^. traitsVigor. to calculateTraitDiceSets
+      , _traitsCognition = old ^. traitsCognition. to calculateTraitDiceSets
+      , _traitsKnowledge = old ^. traitsKnowledge. to calculateTraitDiceSets
+      , _traitsMien = old ^. traitsMien. to calculateTraitDiceSets
+      , _traitsSmarts = old ^. traitsSmarts. to calculateTraitDiceSets
+      , _traitsSpirit = old ^. traitsSpirit. to calculateTraitDiceSets
       }
-    calculateDeftnessDiceSets :: Trait Nat DeftnessAptitudes -> Trait DiceSet DeftnessAptitudes
-    calculateDeftnessDiceSets (Trait ds as) = Trait ds $ DeftnessAptitudes
-      { _deftnessShootin = concentrationDiceSet deftnessShootin ds as
-      }
-    calculateNimblenessDiceSets :: Trait Nat NimblenessAptitudes -> Trait DiceSet NimblenessAptitudes
-    calculateNimblenessDiceSets (Trait ds as ) = Trait ds $ NimblenessAptitudes
-      { _nimblenessFightin    = concentrationDiceSet nimblenessFightin ds as
-      , _nimblenessClimbin    = aptitudeDiceSet nimblenessClimbin ds as
-      , _nimblenessHorseRidin = aptitudeDiceSet nimblenessHorseRidin ds as
-      , _nimblenessDodge      = aptitudeDiceSet nimblenessDodge ds as
-      }
-    calculateQuicknessDiceSets :: Trait Nat QuicknessAptitudes -> Trait DiceSet QuicknessAptitudes
-    calculateQuicknessDiceSets (Trait ds as) = Trait ds $ QuicknessAptitudes
-      { _quicknessQuickLoad = concentrationDiceSet quicknessQuickLoad ds as
-      , _quicknessQuickDraw = concentrationDiceSet quicknessQuickDraw ds as
-      }
-    calculateStrengthDiceSets :: Trait Nat StrengthAptitudes -> Trait DiceSet StrengthAptitudes
-    calculateStrengthDiceSets (Trait ds _) = Trait ds StrengthAptitudes
-    calculateVigorDiceSets :: Trait Nat VigorAptitudes -> Trait DiceSet VigorAptitudes
-    calculateVigorDiceSets (Trait ds _) = Trait ds VigorAptitudes
-    calculateCognitionDiceSets :: Trait Nat CognitionAptitudes -> Trait DiceSet CognitionAptitudes
-    calculateCognitionDiceSets (Trait ds as) = Trait ds $ CognitionAptitudes
-      { _cognitionScruitinize = aptitudeDiceSet cognitionScruitinize ds as
-      , _cognitionSearch = aptitudeDiceSet cognitionSearch ds as
-      , _cognitionTrackin = aptitudeDiceSet cognitionTrackin ds as
-      }
-    calculateKnowledgeDiceSets :: Trait Nat KnowledgeAptitudes -> Trait DiceSet KnowledgeAptitudes
-    calculateKnowledgeDiceSets (Trait ds as) = Trait ds $ KnowledgeAptitudes
-      { _knowledgeTheology = aptitudeDiceSet knowledgeTheology ds as
-      , _knowledgeLatin = aptitudeDiceSet knowledgeLatin ds as
-      , _knowledgeEnglish = aptitudeDiceSet knowledgeEnglish ds as
-      , _knowledgeSpanish = aptitudeDiceSet knowledgeSpanish ds as
-      , _knowledgeOccult = aptitudeDiceSet knowledgeOccult ds as
-      , _knowledgeChihuahua = aptitudeDiceSet knowledgeChihuahua ds as
-      }
-    calculateMienDiceSets :: Trait Nat MienAptitudes -> Trait DiceSet MienAptitudes
-    calculateMienDiceSets (Trait ds as) = Trait ds $ MienAptitudes
-      { _mienOverawe = aptitudeDiceSet mienOverawe ds as
-      }
-    calculateSmartsDiceSets :: Trait Nat SmartsAptitudes -> Trait DiceSet SmartsAptitudes
-    calculateSmartsDiceSets (Trait ds as) = Trait ds $ SmartsAptitudes
-      { _smartsStreetwise = aptitudeDiceSet smartsStreetwise ds as
-      }
-    calculateSpiritDiceSets :: Trait Nat SpiritAptitudes -> Trait DiceSet SpiritAptitudes
-    calculateSpiritDiceSets (Trait ds as) = Trait ds $ SpiritAptitudes
-      { _spiritFaith = aptitudeDiceSet spiritFaith ds as
-      , _spiritGuts = aptitudeDiceSet spiritGuts ds as
-      }
-    concentrationDiceSet :: Getter (a Nat) (Concentration Nat b) -> DiceSet -> a Nat -> Concentration DiceSet b
-    concentrationDiceSet g ds as = (as ^. g) & concentrationLevel %~ aptitudeDice ds
-    aptitudeDiceSet :: Getter (a Nat) Nat -> DiceSet -> a Nat -> DiceSet
-    aptitudeDiceSet g ds = view $ g . to (aptitudeDice ds)
+    calculateTraitDiceSets :: Functor a => Trait a Nat -> Trait a DiceSet
+    calculateTraitDiceSets (Trait ds as) = Trait ds (fmap (aptitudeDice ds) as)
 
 gabriela :: CharacterSheet Nat
 gabriela = CharacterSheet

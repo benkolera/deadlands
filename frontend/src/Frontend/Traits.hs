@@ -42,9 +42,9 @@ traitName n dsDyn = do
 concentration
   :: (PostBuild t m, DomBuilder t m)
   => T.Text
-  -> Getter (a DiceSet) (Concentration DiceSet b)
-  -> [Dynamic t (Concentration DiceSet b) -> m ()]
-  -> Dynamic t (Trait DiceSet a)
+  -> Getter (a DiceSet) (Concentration b DiceSet)
+  -> [Dynamic t (Concentration b DiceSet) -> m ()]
+  -> Dynamic t (Trait a DiceSet)
   -> m ()
 concentration cn getter childLis tDyn = do
   el "li" $ do
@@ -119,7 +119,7 @@ concentrationAptitude
      , PerformEvent t m, HasDocument m)
   => T.Text
   -> Getter a Bool
-  -> Dynamic t (Concentration DiceSet a)
+  -> Dynamic t (Concentration a DiceSet)
   -> m ()
 concentrationAptitude label g cDyn = do
   let alDyn = (\c ->
@@ -135,7 +135,7 @@ pureAptitude
      , PerformEvent t m, HasDocument m)
   => T.Text
   -> Getter (a DiceSet) DiceSet
-  -> Dynamic t (Trait DiceSet a)
+  -> Dynamic t (Trait a DiceSet)
   -> m ()
 pureAptitude name getter tDyn =
   aptitude name (fget (traitAptitudes.getter) tDyn)
@@ -146,8 +146,8 @@ trait
      , MonadJSM (Performable m), HasDocument m)
   => Dynamic t s
   -> T.Text
-  -> Getter s (Trait DiceSet a)
-  -> [Dynamic t (Trait DiceSet a) -> m ()]
+  -> Getter s (Trait a DiceSet)
+  -> [Dynamic t (Trait a DiceSet) -> m ()]
   -> m ()
 trait traitsDyn tLabel tGetter aptitudes =
   elClass "li" "trait" $ do

@@ -9,6 +9,7 @@ library
                , common
                , containers
                , clay
+               , endo
                , jsaddle
                , ghcjs-dom
                , lens

@@ -51,6 +51,8 @@ frontend = Frontend
       el "style" . text . TL.toStrict . render $ style
   , _frontend_body = prerender (text "Loading...") $ elClass "div" "app" $ mdo
       let chrDs  = calculateDiceSets gabriela
+      -- This forms an infinite recursion because we can't make maxWounds until we have a chrDyn
+      -- fix this by making a function woundChanges :: Dynamic t Nat -> Event t (Endo CharacterSheet)
       let chrDyn = applyWounds chrDs <$> maxWoundsE
       --let chrDyn = constDyn (calculateDiceSets gabriela)
       maxWoundsE <- elClass "div" "character-sheet" $ do

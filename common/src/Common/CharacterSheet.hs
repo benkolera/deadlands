@@ -7,7 +7,7 @@ module Common.CharacterSheet where
 
 import           Control.Lens     ()
 import           Control.Lens.TH  (makeLenses, makePrisms)
-import           Data.Number.Nat  (Nat)
+import           Data.Number.Nat  (Nat, fromNat)
 import           Data.Number.Nat1 (Nat1)
 import           Data.Set         (Set)
 import qualified Data.Set         as Set
@@ -192,7 +192,11 @@ aptitudeDice ds 0 = ds & diceSetNum .~ 1 & diceSetBonus %~ (\x -> x - 4)
 aptitudeDice ds n = ds & diceSetNum .~ (toNat1 n)
 
 calculateDiceSets :: CharacterSheet Nat -> CharacterSheet DiceSet
-calculateDiceSets = over chrSheetTraits calculateTraitsDiceSets
+calculateDiceSets cs = cs
+  & chrSheetTraits %~ calculateTraitsDiceSets
+  & chrSheetTraits.traitsSpirit.traitAptitudes.spiritGuts.diceSetBonus %~
+    -- Bump up the guts check based on grit
+    (+ (cs^.chrSheetBackground.chrBgGrit.to fromNat))
   where
     calculateTraitsDiceSets old = Traits
       { _traitsDeftness = old ^. traitsDeftness . to calculateTraitDiceSets

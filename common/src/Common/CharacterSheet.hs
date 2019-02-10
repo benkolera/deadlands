@@ -1,17 +1,26 @@
-{-# LANGUAGE DeriveFunctor     #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes        #-}
-{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE DeriveFunctor              #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE RankNTypes                 #-}
+{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TypeFamilies               #-}
 
 module Common.CharacterSheet where
 
 import           Control.Lens     ()
 import           Control.Lens.TH  (makeLenses, makePrisms)
+import           Data.Map         (Map)
+import qualified Data.Map         as Map
+import           Data.Monoid.Endo (Endo (Endo))
 import           Data.Number.Nat  (Nat, fromNat)
 import           Data.Number.Nat1 (Nat1)
 import           Data.Set         (Set)
 import qualified Data.Set         as Set
+import           Data.String      (IsString)
 import           Data.Text        (Text)
+import qualified Data.Text        as T
 
 import           Control.Lens
 import           Data.Number.Nat1 (toNat1)
@@ -150,9 +159,15 @@ data Hinderances = OathChurch | Ferner | Poverty | Heroic
   deriving (Eq, Ord, Show)
 makePrisms ''Hinderances
 
+data ActiveBonus = ActiveBonus
+  { _activeBonusRoundsLeft :: Nat1
+  , _activeBonusValue      :: Integer
+  } deriving (Eq, Ord, Show)
+makeLenses ''ActiveBonus
+
 data Blessings
-  = ArmorOfRigtheousness
-  | Smite
+  = ArmorOfRigtheousness (Maybe ActiveBonus)
+  | Smite (Maybe ActiveBonus)
   | Chastise
   | RefugeOFaith
   | LayOnHands
@@ -213,6 +228,32 @@ calculateDiceSets cs = cs
     calculateTraitDiceSets :: Functor a => Trait a Nat -> Trait a DiceSet
     calculateTraitDiceSets (Trait ds as) = Trait ds (fmap (aptitudeDice ds) as)
 
+data EffectValue
+  = Special
+  | BonusAllTraitsAndAptitudes Integer
+  | Bonus (Lens' (CharacterSheet DiceSet) Integer) Integer
+  | DiceSubstitution
+    (Lens' (CharacterSheet DiceSet) DiceSet)
+    (Lens' (CharacterSheet DiceSet) DiceSet)
+
+data EffectCreator = NoArgument EffectValue
+  | AptitudeCheckSuccesses Nat1 (Lens' (CharacterSheet DiceSet) DiceSet) (Integer -> EffectValue)
+  | AptitudeCheckValue Nat1 (Lens' (CharacterSheet DiceSet) DiceSet) (Integer -> EffectValue)
+
+newtype EffectName = EffectName { unEffectName :: T.Text } deriving (Eq, Ord, Show, IsString)
+makeWrapped ''EffectName
+
+type EffectMap = Map EffectName EffectValue
+
+effectsToCharSheet :: EffectMap -> Endo (CharacterSheet DiceSet)
+effectsToCharSheet = foldMap (uncurry applyEffect) . Map.toList
+  where
+    applyEffect n v = case v of
+      Special -> Endo id
+      BonusAllTraitsAndAptitudes b -> Endo $ chrSheetTraits %~ mapTraitsDiceSet (diceSetBonus %~ (+ b))
+      Bonus l b -> Endo $ l %~ (+ b)
+      DiceSubstitution dl tl -> Endo $ \cs -> cs & tl .~ (cs ^. dl)
+
 gabriela :: CharacterSheet Nat
 gabriela = CharacterSheet
   { _chrSheetTraits = Traits
@@ -268,8 +309,8 @@ gabriela = CharacterSheet
   , _chrSheetHinderances = Set.fromList
     [OathChurch, Ferner, Poverty, Heroic]
   , _chrSheetBlessings = Set.fromList
-    [ ArmorOfRigtheousness
-    , Smite
+    [ ArmorOfRigtheousness Nothing
+    , Smite Nothing
     , Chastise
     , Confession
     , LayOnHands

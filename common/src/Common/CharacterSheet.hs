@@ -245,6 +245,12 @@ makeWrapped ''EffectName
 
 type EffectMap = Map EffectName EffectValue
 
+data EffectMeta = EffectMeta
+  { _effectMetaDesc :: Text
+  , _effectMetaLongDesc :: [Text]
+  }
+makeLenses ''EffectMeta
+
 effectsToCharSheet :: EffectMap -> Endo (CharacterSheet DiceSet)
 effectsToCharSheet = foldMap (uncurry applyEffect) . Map.toList
   where

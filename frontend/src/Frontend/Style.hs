@@ -266,4 +266,30 @@ style = do
       overflow auto
       display block
 
+      ".effects-section" ? do
+        marginBottom (em 2)
+
+        ".effect" ? do
+          textAlign (alignSide sideLeft)
+          borderBottomWidth (px 1)
+          borderBottomStyle dotted
+          borderBottomColor (rgb 102 102 102)
+          padding (em 0.7) (em 0) (em 0.5) (em 0)
+
+          ":first-of-type" & do
+            borderTopWidth (px 1)
+            borderTopStyle dotted
+            borderTopColor (rgb 102 102 102)
+
+          ".toggle-desc" ? do
+            float floatRight
+            fontSize (em 0.7)
+            marginTop (em 0.1)
+
+          ".name" ? fontWeight bold
+          ".short-desc" ? fontSize (em 0.8)
+          ".long-desc" ? do
+            fontSize (em 0.8)
+            padding (em 0.1) (em 0.1) (em 0.1) (em 0.1)
+
   pure ()

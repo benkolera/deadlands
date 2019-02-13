@@ -25,7 +25,7 @@ import           Common.Route
 import           Frontend.Internal        (fget, diffDyn)
 import           Frontend.Style
 import           Frontend.Traits          (traits)
-import           Frontend.Spells          (edges)
+import           Frontend.Spells          (blessings, edges, hinderances, knacks)
 import           Frontend.Wounds          (Limbs (Limbs), wounds)
 import           Obelisk.Generated.Static
 
@@ -56,8 +56,10 @@ frontend = Frontend
       el "title" $ text "Deadlands Character Sheet"
       el "style" . text . TL.toStrict . render $ style
   , _frontend_body = prerender (text "Loading...") $ elClass "div" "app" $ mdo
-      let chrDs  = calculateDiceSets gabriela
-      chrDyn <- foldDyn (flip runEndo) chrDs woundsDiffE
+      let chrDs       = calculateDiceSets gabriela
+      let initEffects = calculateEdgeEffects (chrDs ^. chrSheetEdges)
+      let initChrDs   = runEndo chrDs (effectsToCharSheet initEffects)
+      chrDyn <- foldDyn (flip runEndo) initChrDs woundsDiffE
       woundsDiffE <- elClass "div" "character-sheet" $ do
         elClass "div" "traits" $ do
           traits (fget chrSheetTraits chrDyn)
@@ -70,7 +72,10 @@ frontend = Frontend
             (fget chrSheetLightArmor chrDyn)
             (Limbs 0 0 (Just 0) (Just 0) (Just 0) (Just 0))
         elClass "div" "spells" $ do
+          blessings (fget chrSheetBlessings chrDyn)
           edges (fget chrSheetEdges chrDyn)
+          hinderances (fget chrSheetHinderances chrDyn)
+          knacks (fget chrSheetKnacks chrDyn)
         pure (woundEffects maxWoundsDyn)
       pure ()
   }

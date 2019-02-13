@@ -11,6 +11,8 @@ module Common.CharacterSheet where
 
 import           Control.Lens     ()
 import           Control.Lens.TH  (makeLenses, makePrisms)
+import           Data.Foldable    (toList)
+import           Data.List        (sortBy)
 import           Data.Map         (Map)
 import qualified Data.Map         as Map
 import           Data.Monoid.Endo (Endo (Endo))
@@ -166,7 +168,7 @@ data ActiveBonus = ActiveBonus
 makeLenses ''ActiveBonus
 
 data Blessings
-  = ArmorOfRigtheousness (Maybe ActiveBonus)
+  = ArmorOfRighteousness (Maybe ActiveBonus)
   | Smite (Maybe ActiveBonus)
   | Chastise
   | RefugeOFaith
@@ -174,6 +176,7 @@ data Blessings
   | HolyRoller
   | Protection
   | Confession
+  | MagicResistant
   deriving (Eq, Ord, Show)
 makePrisms ''Blessings
 
@@ -246,19 +249,35 @@ makeWrapped ''EffectName
 type EffectMap = Map EffectName EffectValue
 
 data EffectMeta = EffectMeta
-  { _effectMetaDesc :: Text
+  { _effectMetaDesc     :: Text
   , _effectMetaLongDesc :: [Text]
   }
 makeLenses ''EffectMeta
 
 effectsToCharSheet :: EffectMap -> Endo (CharacterSheet DiceSet)
-effectsToCharSheet = foldMap (uncurry applyEffect) . Map.toList
+effectsToCharSheet em = foldMap (uncurry applyEffect) $ subs <> nonSubs
   where
+    es = Map.toList em
+    isSub (DiceSubstitution _ _) = True
+    isSub _ = True
+    subs = filter (isSub . snd) es
+    nonSubs = filter (not . isSub . snd) es
     applyEffect n v = case v of
       Special -> Endo id
       BonusAllTraitsAndAptitudes b -> Endo $ chrSheetTraits %~ mapTraitsDiceSet (diceSetBonus %~ (+ b))
       Bonus l b -> Endo $ l %~ (+ b)
       DiceSubstitution dl tl -> Endo $ \cs -> cs & tl .~ (cs ^. dl)
+
+-- TODO : This overlaps a lot with the edgesMap in Frontend.Spells . We'll have
+-- to refactor this and move it up.
+calculateEdgeEffects :: Set Edges -> EffectMap
+calculateEdgeEffects = Map.fromList . fmap edgeEffect . toList
+  where
+    edgeEffect ArcaneBlessed = ("Arcane (Blessed)", Special)
+    edgeEffect Brave = ("Brave",Bonus (chrSheetTraits.traitsSpirit.traitAptitudes.spiritGuts.diceSetBonus) 2)
+    edgeEffect LevelHeaded = ("Level Headed", Special)
+    edgeEffect NervesOfSteel = ("Nerves o' Steel", Special)
+    edgeEffect TheStare = ("The Stare", Bonus (chrSheetTraits.traitsMien.traitAptitudes.mienOverawe.diceSetBonus) 2)
 
 gabriela :: CharacterSheet Nat
 gabriela = CharacterSheet
@@ -315,13 +334,15 @@ gabriela = CharacterSheet
   , _chrSheetHinderances = Set.fromList
     [OathChurch, Ferner, Poverty, Heroic]
   , _chrSheetBlessings = Set.fromList
-    [ ArmorOfRigtheousness Nothing
+    [ ArmorOfRighteousness Nothing
     , Smite Nothing
     , Chastise
     , Confession
     , LayOnHands
     , HolyRoller
     , Protection
+    , MagicResistant
+    , RefugeOFaith
     ]
   , _chrSheetKnacks = Set.fromList
     [BornOnChristmas]

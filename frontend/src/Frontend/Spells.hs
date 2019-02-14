@@ -155,7 +155,6 @@ knacksMap = Map.fromList . fmap knackMeta . toList
         ""
         []
 
-
 toEffectTuple t sd ls = (EffectName t, EffectMeta sd ls)
 
 blessings

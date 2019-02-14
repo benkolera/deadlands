@@ -181,6 +181,9 @@ traits traitsDyn = do
       [ concentration "Quick Load" quicknessQuickLoad
         [ concentrationAptitude "Shotgun" quickLoadShotgun
         ]
+      , concentration "Quick Draw" quicknessQuickDraw
+        [ concentrationAptitude "Shotgun" quickDrawShotgun
+        ]
       ]
     trait traitsDyn "Strength" traitsStrength $
       []

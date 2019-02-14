@@ -11,12 +11,13 @@ module Common.CharacterSheet where
 
 import           Control.Lens     ()
 import           Control.Lens.TH  (makeLenses, makePrisms)
-import           Data.Foldable    (toList)
+import           Data.Foldable    (toList, fold)
 import           Data.List        (sortBy)
 import           Data.Map         (Map)
 import qualified Data.Map         as Map
+import           Data.Maybe       (mapMaybe)
 import           Data.Monoid.Endo (Endo (Endo))
-import           Data.Number.Nat  (Nat, fromNat)
+import           Data.Number.Nat  (Nat, toNat, fromNat)
 import           Data.Number.Nat1 (Nat1)
 import           Data.Set         (Set)
 import qualified Data.Set         as Set
@@ -209,6 +210,11 @@ aptitudeDice :: DiceSet -> Nat -> DiceSet
 aptitudeDice ds 0 = ds & diceSetNum .~ 1 & diceSetBonus %~ (\x -> x - 4)
 aptitudeDice ds n = ds & diceSetNum .~ (toNat1 n)
 
+clampAddNat :: Nat -> Integer -> Nat
+clampAddNat n i = if (intRes < 0) then 0 else toNat intRes
+  where
+    intRes = (fromNat n) + 1
+
 calculateDiceSets :: CharacterSheet Nat -> CharacterSheet DiceSet
 calculateDiceSets cs = cs
   & chrSheetTraits %~ calculateTraitsDiceSets
@@ -235,6 +241,7 @@ data EffectValue
   = Special
   | BonusAllTraitsAndAptitudes Integer
   | Bonus (Lens' (CharacterSheet DiceSet) Integer) Integer
+  | LightArmorBonus Integer
   | DiceSubstitution
     (Lens' (CharacterSheet DiceSet) DiceSet)
     (Lens' (CharacterSheet DiceSet) DiceSet)
@@ -255,11 +262,11 @@ data EffectMeta = EffectMeta
 makeLenses ''EffectMeta
 
 effectsToCharSheet :: EffectMap -> Endo (CharacterSheet DiceSet)
-effectsToCharSheet em = foldMap (uncurry applyEffect) $ subs <> nonSubs
+effectsToCharSheet em = foldMap (uncurry applyEffect) $ nonSubs <> subs
   where
     es = Map.toList em
     isSub (DiceSubstitution _ _) = True
-    isSub _ = True
+    isSub _                      = False
     subs = filter (isSub . snd) es
     nonSubs = filter (not . isSub . snd) es
     applyEffect n v = case v of
@@ -267,9 +274,34 @@ effectsToCharSheet em = foldMap (uncurry applyEffect) $ subs <> nonSubs
       BonusAllTraitsAndAptitudes b -> Endo $ chrSheetTraits %~ mapTraitsDiceSet (diceSetBonus %~ (+ b))
       Bonus l b -> Endo $ l %~ (+ b)
       DiceSubstitution dl tl -> Endo $ \cs -> cs & tl .~ (cs ^. dl)
+      LightArmorBonus b -> Endo $ chrSheetLightArmor %~ (\i -> clampAddNat i b)
 
 -- TODO : This overlaps a lot with the edgesMap in Frontend.Spells . We'll have
 -- to refactor this and move it up.
+calculateCharacterSheetEffects :: CharacterSheet a -> EffectMap
+calculateCharacterSheetEffects cs = fold
+  [ calculateBlessingEffects (cs^.chrSheetBlessings)
+  , calculateEdgeEffects (cs^.chrSheetEdges)
+  , calculateHinderanceEffects (cs^.chrSheetHinderances)
+  , calculateKnackEffects (cs^.chrSheetKnacks)
+  ]
+
+calculateBlessingEffects :: Set Blessings -> EffectMap
+calculateBlessingEffects = Map.fromList . mapMaybe blessingEffect . toList
+  where
+    faithSub = DiceSubstitution (chrSheetTraits.traitsSpirit.traitAptitudes.spiritFaith)
+    blessingEffect (ArmorOfRighteousness bMay) = (\lab -> ("Armor o' Righteousness", LightArmorBonus $ lab ^. activeBonusValue)) <$> bMay
+    blessingEffect (Smite bMay) = (\b -> ("Smite", Bonus (chrSheetTraits.traitsStrength.traitDiceSet.diceSetBonus) (b^.activeBonusValue))) <$> bMay
+    blessingEffect Chastise = Just $ ("Chastise", faithSub (chrSheetTraits.traitsMien.traitAptitudes.mienOverawe))
+    blessingEffect RefugeOFaith = Just $ ("Refuge o' Faith", faithSub (chrSheetTraits.traitsNimbleness.traitAptitudes.nimblenessDodge))
+    blessingEffect LayOnHands = Just $ ("Lay on Hands", Special)
+    blessingEffect HolyRoller = Just $ ("Holy Roller", Special)
+    blessingEffect Protection = Just $ ("Protection", Special)
+    blessingEffect Confession = Just $ ("Confession", Special)
+    blessingEffect MagicResistant = Just $ ("Magic Resistant", Special)
+
+
+
 calculateEdgeEffects :: Set Edges -> EffectMap
 calculateEdgeEffects = Map.fromList . fmap edgeEffect . toList
   where
@@ -278,6 +310,19 @@ calculateEdgeEffects = Map.fromList . fmap edgeEffect . toList
     edgeEffect LevelHeaded = ("Level Headed", Special)
     edgeEffect NervesOfSteel = ("Nerves o' Steel", Special)
     edgeEffect TheStare = ("The Stare", Bonus (chrSheetTraits.traitsMien.traitAptitudes.mienOverawe.diceSetBonus) 2)
+
+calculateHinderanceEffects :: Set Hinderances -> EffectMap
+calculateHinderanceEffects = Map.fromList . fmap hinderanceEffect . toList
+  where
+    hinderanceEffect Heroic     = ("Heroic", Special)
+    hinderanceEffect OathChurch = ("Oath (Church)", Special)
+    hinderanceEffect Ferner     = ("Ferner", Special)
+    hinderanceEffect Poverty    = ("Poverty", Special)
+
+calculateKnackEffects :: Set Knacks -> EffectMap
+calculateKnackEffects = Map.fromList . fmap knackEffect . toList
+  where
+    knackEffect BornOnChristmas = ("Born on Christmas", Special)
 
 gabriela :: CharacterSheet Nat
 gabriela = CharacterSheet

@@ -57,7 +57,7 @@ frontend = Frontend
       el "style" . text . TL.toStrict . render $ style
   , _frontend_body = prerender (text "Loading...") $ elClass "div" "app" $ mdo
       let chrDs       = calculateDiceSets gabriela
-      let initEffects = calculateEdgeEffects (chrDs ^. chrSheetEdges)
+      let initEffects = calculateCharacterSheetEffects chrDs
       let initChrDs   = runEndo chrDs (effectsToCharSheet initEffects)
       chrDyn <- foldDyn (flip runEndo) initChrDs woundsDiffE
       woundsDiffE <- elClass "div" "character-sheet" $ do

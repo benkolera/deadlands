@@ -164,7 +164,7 @@ makePrisms ''Hinderances
 
 data ActiveBonus = ActiveBonus
   { _activeBonusRoundsLeft :: Nat1
-  , _activeBonusValue      :: Integer
+  , _activeBonusValue      :: Nat
   } deriving (Eq, Ord, Show)
 makeLenses ''ActiveBonus
 
@@ -213,7 +213,7 @@ aptitudeDice ds n = ds & diceSetNum .~ (toNat1 n)
 clampAddNat :: Nat -> Integer -> Nat
 clampAddNat n i = if (intRes < 0) then 0 else toNat intRes
   where
-    intRes = (fromNat n) + 1
+    intRes = (fromNat n) + i
 
 calculateDiceSets :: CharacterSheet Nat -> CharacterSheet DiceSet
 calculateDiceSets cs = cs
@@ -242,6 +242,7 @@ data EffectValue
   | BonusAllTraitsAndAptitudes Integer
   | Bonus (Lens' (CharacterSheet DiceSet) Integer) Integer
   | LightArmorBonus Integer
+  | DiceSideStep (Lens' (CharacterSheet DiceSet) DiceSet) Nat
   | DiceSubstitution
     (Lens' (CharacterSheet DiceSet) DiceSet)
     (Lens' (CharacterSheet DiceSet) DiceSet)
@@ -274,6 +275,7 @@ effectsToCharSheet em = foldMap (uncurry applyEffect) $ nonSubs <> subs
       BonusAllTraitsAndAptitudes b -> Endo $ chrSheetTraits %~ mapTraitsDiceSet (diceSetBonus %~ (+ b))
       Bonus l b -> Endo $ l %~ (+ b)
       DiceSubstitution dl tl -> Endo $ \cs -> cs & tl .~ (cs ^. dl)
+      DiceSideStep l s -> fold $ replicate (fromNat s) (Endo $ l %~ stepTrait)
       LightArmorBonus b -> Endo $ chrSheetLightArmor %~ (\i -> clampAddNat i b)
 
 -- TODO : This overlaps a lot with the edgesMap in Frontend.Spells . We'll have
@@ -290,8 +292,8 @@ calculateBlessingEffects :: Set Blessings -> EffectMap
 calculateBlessingEffects = Map.fromList . mapMaybe blessingEffect . toList
   where
     faithSub = DiceSubstitution (chrSheetTraits.traitsSpirit.traitAptitudes.spiritFaith)
-    blessingEffect (ArmorOfRighteousness bMay) = (\lab -> ("Armor o' Righteousness", LightArmorBonus $ lab ^. activeBonusValue)) <$> bMay
-    blessingEffect (Smite bMay) = (\b -> ("Smite", Bonus (chrSheetTraits.traitsStrength.traitDiceSet.diceSetBonus) (b^.activeBonusValue))) <$> bMay
+    blessingEffect (ArmorOfRighteousness bMay) = (\lab -> ("Armor o' Righteousness", LightArmorBonus $ lab ^. activeBonusValue. to fromNat)) <$> bMay
+    blessingEffect (Smite bMay) = (\b -> ("Smite", DiceSideStep (chrSheetTraits.traitsStrength.traitDiceSet) (b^.activeBonusValue))) <$> bMay
     blessingEffect Chastise = Just $ ("Chastise", faithSub (chrSheetTraits.traitsMien.traitAptitudes.mienOverawe))
     blessingEffect RefugeOFaith = Just $ ("Refuge o' Faith", faithSub (chrSheetTraits.traitsNimbleness.traitAptitudes.nimblenessDodge))
     blessingEffect LayOnHands = Just $ ("Lay on Hands", Special)
@@ -379,8 +381,8 @@ gabriela = CharacterSheet
   , _chrSheetHinderances = Set.fromList
     [OathChurch, Ferner, Poverty, Heroic]
   , _chrSheetBlessings = Set.fromList
-    [ ArmorOfRighteousness Nothing
-    , Smite Nothing
+    [ ArmorOfRighteousness (Just $ ActiveBonus 1 9)
+    , Smite (Just $ ActiveBonus 1 5)
     , Chastise
     , Confession
     , LayOnHands

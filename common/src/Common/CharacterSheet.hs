@@ -196,6 +196,8 @@ makeLenses ''CharacterBackground
 
 data CharacterSheet l = CharacterSheet
   { _chrSheetTraits      :: Traits l
+  -- Now that these have optional values inside them, this sucks.
+  -- Lets change these to Dmap.
   , _chrSheetEdges       :: Set Edges
   , _chrSheetHinderances :: Set Hinderances
   , _chrSheetBlessings   :: Set Blessings

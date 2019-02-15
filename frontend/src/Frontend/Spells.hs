@@ -13,23 +13,19 @@ import           Control.Lens
 
 import           Control.Monad.Fix     (MonadFix)
 import           Data.Bool             (bool)
-import           Data.Dependent.Map    (DSum((:=>)))
+import           Data.Dependent.Map    (DSum ((:=>)))
 import qualified Data.Dependent.Map    as DMap
-import           Data.Foldable         (toList)
 import           Data.Foldable         (traverse_)
 import           Data.Functor          (void)
 import           Data.List.NonEmpty    (nonEmpty)
 import           Data.Map              (Map)
 import qualified Data.Map              as Map
 import           Data.Monoid.Endo      (Endo)
---import           Data.Number.Nat         (Nat, toNat)
---import           Data.Number.Nat1        (Nat1, fromNat1)
-import           Data.Set              (Set)
+import           Data.Text             (Text)
 import           Reflex.Dom
 
-import           Frontend.Internal     (fget)
---import           Obelisk.Generated.Static
 import           Common.CharacterSheet
+import           Frontend.Internal     (fget)
 
 blessingsMap :: BlessingsMap -> Map EffectName EffectMeta
 blessingsMap = Map.fromList . fmap blessingMeta . DMap.toList
@@ -160,7 +156,7 @@ knacksMap = Map.fromList . fmap knackMeta . DMap.toList
       (BornOnChristmas :=> _) -> toEffectTuple "Born On Christmas"
         ""
         []
-
+toEffectTuple :: Text -> Text -> [Text] -> (EffectName, EffectMeta)
 toEffectTuple t sd ls = (EffectName t, EffectMeta sd ls)
 
 blessings
@@ -187,6 +183,11 @@ knacks
   -> m (Event t (Endo EffectMap))
 knacks = effectsSection "Knacks" . fmap knacksMap
 
+effectsSection
+  :: (DomBuilder t m, PostBuild t m, MonadHold t m, MonadFix m)
+  => Text
+  -> Dynamic t (Map EffectName EffectMeta)
+  -> m (Event t a)
 effectsSection title eMapDyn = elClass "div" "effects-section" $ do
   el "h2" $ text title
   _ <- listWithKey eMapDyn $ \k emDyn -> elClass "div" "effect" $ mdo
@@ -201,7 +202,7 @@ effectsSection title eMapDyn = elClass "div" "effects-section" $ do
       openDyn <- foldDyn (const not) False toggleE
       (buttEl,_) <- elClass' "button" "toggle-desc" . dynText . fmap (bool "expand" "hide") $ openDyn
       let toggleE = domEvent Click buttEl
-      let lines = elClass "div" "long-desc" $ traverse_ (el "p" . text) l
-      let next = bool blank lines <$> updated openDyn
-      widgetHold blank next
+      let linePs = elClass "div" "long-desc" $ traverse_ (el "p" . text) l
+      let next = bool blank linePs <$> updated openDyn
+      void $ widgetHold blank next
       pure ()

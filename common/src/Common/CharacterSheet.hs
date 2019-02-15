@@ -14,25 +14,22 @@
 module Common.CharacterSheet where
 
 import           Control.Lens          ()
-import           Control.Lens.TH       (makeLenses, makePrisms)
+import           Control.Lens.TH       (makeLenses)
 import           Data.Dependent.Map    (DMap, DSum((:=>)))
 import qualified Data.Dependent.Map    as DMap
 import           Data.Dependent.Sum    ((==>))
-import           Data.Foldable         (fold, toList)
+import           Data.Foldable         (fold)
 import           Data.Functor.Identity (Identity)
 import           Data.GADT.Compare     ()
 import           Data.GADT.Compare.TH  (deriveGCompare, deriveGEq)
 import           Data.GADT.Show        ()
 import           Data.GADT.Show.TH     (deriveGShow)
-import           Data.List             (sortBy)
 import           Data.Map              (Map)
 import qualified Data.Map              as Map
 import           Data.Maybe            (mapMaybe)
 import           Data.Monoid.Endo      (Endo (Endo))
 import           Data.Number.Nat       (Nat, fromNat, toNat)
 import           Data.Number.Nat1      (Nat1)
-import           Data.Set              (Set)
-import qualified Data.Set              as Set
 import           Data.Text             (Text)
 import qualified Data.Text             as T
 
@@ -309,7 +306,7 @@ effectsToCharSheet em = foldMap (uncurry applyEffect) $ nonSubs <> subs
     isSub _                      = False
     subs = filter (isSub . snd) es
     nonSubs = filter (not . isSub . snd) es
-    applyEffect n v = case v of
+    applyEffect _ v = case v of
       Special -> Endo id
       BonusAllTraitsAndAptitudes b -> Endo $ chrSheetTraits %~ mapTraitsDiceSet (diceSetBonus %~ (+ b))
       Bonus l b -> Endo $ l %~ (+ b)

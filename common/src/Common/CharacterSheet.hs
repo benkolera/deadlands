@@ -1,32 +1,43 @@
+{-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DeriveFunctor              #-}
+{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RankNTypes                 #-}
+{-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
 
 module Common.CharacterSheet where
 
-import           Control.Lens     ()
-import           Control.Lens.TH  (makeLenses, makePrisms)
-import           Data.Foldable    (toList, fold)
-import           Data.List        (sortBy)
-import           Data.Map         (Map)
-import qualified Data.Map         as Map
-import           Data.Maybe       (mapMaybe)
-import           Data.Monoid.Endo (Endo (Endo))
-import           Data.Number.Nat  (Nat, toNat, fromNat)
-import           Data.Number.Nat1 (Nat1)
-import           Data.Set         (Set)
-import qualified Data.Set         as Set
-import           Data.String      (IsString)
-import           Data.Text        (Text)
-import qualified Data.Text        as T
+import           Control.Lens          ()
+import           Control.Lens.TH       (makeLenses, makePrisms)
+import           Data.Dependent.Map    (DMap, DSum((:=>)))
+import qualified Data.Dependent.Map    as DMap
+import           Data.Dependent.Sum    ((==>))
+import           Data.Foldable         (fold, toList)
+import           Data.Functor.Identity (Identity)
+import           Data.GADT.Compare     ()
+import           Data.GADT.Compare.TH  (deriveGCompare, deriveGEq)
+import           Data.GADT.Show        ()
+import           Data.GADT.Show.TH     (deriveGShow)
+import           Data.List             (sortBy)
+import           Data.Map              (Map)
+import qualified Data.Map              as Map
+import           Data.Maybe            (mapMaybe)
+import           Data.Monoid.Endo      (Endo (Endo))
+import           Data.Number.Nat       (Nat, fromNat, toNat)
+import           Data.Number.Nat1      (Nat1)
+import           Data.Set              (Set)
+import qualified Data.Set              as Set
+import           Data.Text             (Text)
+import qualified Data.Text             as T
 
 import           Control.Lens
-import           Data.Number.Nat1 (toNat1)
+import           Data.Number.Nat1      (toNat1)
 
 import           Common.DiceSet
 
@@ -154,13 +165,30 @@ mapTraitsDiceSet f old = Traits
     , _traitsSpirit = old ^. traitsSpirit .to (mapTraitDiceSet f)
     }
 
-data Edges = ArcaneBlessed | Brave | LevelHeaded | NervesOfSteel | TheStare
-  deriving (Eq, Ord, Show)
-makePrisms ''Edges
+data Edges a where
+  ArcaneBlessed :: Edges ()
+  Brave         :: Edges ()
+  LevelHeaded   :: Edges ()
+  NervesOfSteel :: Edges ()
+  TheStare      :: Edges ()
 
-data Hinderances = OathChurch | Ferner | Poverty | Heroic
-  deriving (Eq, Ord, Show)
-makePrisms ''Hinderances
+deriveGEq ''Edges
+deriveGCompare ''Edges
+deriveGShow ''Edges
+
+type EdgesMap = DMap Edges Identity
+
+data Hinderances a where
+  OathChurch  :: Hinderances ()
+  Ferner      :: Hinderances ()
+  Poverty     :: Hinderances ()
+  Heroic      :: Hinderances ()
+
+deriveGEq ''Hinderances
+deriveGCompare ''Hinderances
+deriveGShow ''Hinderances
+
+type HinderancesMap = DMap Hinderances Identity
 
 data ActiveBonus = ActiveBonus
   { _activeBonusRoundsLeft :: Nat1
@@ -168,22 +196,31 @@ data ActiveBonus = ActiveBonus
   } deriving (Eq, Ord, Show)
 makeLenses ''ActiveBonus
 
-data Blessings
-  = ArmorOfRighteousness (Maybe ActiveBonus)
-  | Smite (Maybe ActiveBonus)
-  | Chastise
-  | RefugeOFaith
-  | LayOnHands
-  | HolyRoller
-  | Protection
-  | Confession
-  | MagicResistant
-  deriving (Eq, Ord, Show)
-makePrisms ''Blessings
+data Blessings a where
+  ArmorOfRighteousness :: Blessings (Maybe ActiveBonus)
+  Smite                :: Blessings (Maybe ActiveBonus)
+  Chastise             :: Blessings ()
+  RefugeOFaith         :: Blessings ()
+  LayOnHands           :: Blessings ()
+  HolyRoller           :: Blessings ()
+  Protection           :: Blessings ()
+  Confession           :: Blessings ()
+  MagicResistant       :: Blessings ()
 
-data Knacks = BornOnChristmas
-  deriving (Eq, Ord, Show)
-makePrisms ''Knacks
+deriveGEq ''Blessings
+deriveGCompare ''Blessings
+deriveGShow ''Blessings
+
+type BlessingsMap = DMap Blessings Identity
+
+data Knacks a where
+  BornOnChristmas :: Knacks ()
+
+deriveGEq ''Knacks
+deriveGCompare ''Knacks
+deriveGShow ''Knacks
+
+type KnacksMap = DMap Knacks Identity
 
 data CharacterBackground = CharacterBackground
   { _chrBgName       :: Text
@@ -198,14 +235,14 @@ data CharacterSheet l = CharacterSheet
   { _chrSheetTraits      :: Traits l
   -- Now that these have optional values inside them, this sucks.
   -- Lets change these to Dmap.
-  , _chrSheetEdges       :: Set Edges
-  , _chrSheetHinderances :: Set Hinderances
-  , _chrSheetBlessings   :: Set Blessings
-  , _chrSheetKnacks      :: Set Knacks
+  , _chrSheetEdges       :: EdgesMap
+  , _chrSheetHinderances :: HinderancesMap
+  , _chrSheetBlessings   :: BlessingsMap
+  , _chrSheetKnacks      :: KnacksMap
   , _chrSheetSize        :: Nat1
   , _chrSheetLightArmor  :: Nat
   , _chrSheetBackground  :: CharacterBackground
-  } deriving (Show, Eq)
+  }
 makeLenses ''CharacterSheet
 
 aptitudeDice :: DiceSet -> Nat -> DiceSet
@@ -221,7 +258,7 @@ calculateDiceSets :: CharacterSheet Nat -> CharacterSheet DiceSet
 calculateDiceSets cs = cs
   & chrSheetTraits %~ calculateTraitsDiceSets
   & chrSheetTraits.traitsSpirit.traitAptitudes.spiritGuts.diceSetBonus %~
-    -- Bump up the guts check based on grit
+    -- Bump up the guts check based on grit: This should probably become an effect
     (+ (cs^.chrSheetBackground.chrBgGrit.to fromNat))
   where
     calculateTraitsDiceSets old = Traits
@@ -253,7 +290,7 @@ data EffectCreator = NoArgument EffectValue
   | AptitudeCheckSuccesses Nat1 (Lens' (CharacterSheet DiceSet) DiceSet) (Integer -> EffectValue)
   | AptitudeCheckValue Nat1 (Lens' (CharacterSheet DiceSet) DiceSet) (Integer -> EffectValue)
 
-newtype EffectName = EffectName { unEffectName :: T.Text } deriving (Eq, Ord, Show, IsString)
+newtype EffectName = EffectName { unEffectName :: T.Text } deriving (Eq, Ord, Show)
 makeWrapped ''EffectName
 
 type EffectMap = Map EffectName EffectValue
@@ -290,43 +327,50 @@ calculateCharacterSheetEffects cs = fold
   , calculateKnackEffects (cs^.chrSheetKnacks)
   ]
 
-calculateBlessingEffects :: Set Blessings -> EffectMap
-calculateBlessingEffects = Map.fromList . mapMaybe blessingEffect . toList
+en :: Text -> EffectName
+en = EffectName
+
+calculateBlessingEffects :: BlessingsMap -> EffectMap
+calculateBlessingEffects = Map.fromList . mapMaybe blessingEffect . DMap.toList
   where
     faithSub = DiceSubstitution (chrSheetTraits.traitsSpirit.traitAptitudes.spiritFaith)
-    blessingEffect (ArmorOfRighteousness bMay) = (\lab -> ("Armor o' Righteousness", LightArmorBonus $ lab ^. activeBonusValue. to fromNat)) <$> bMay
-    blessingEffect (Smite bMay) = (\b -> ("Smite", DiceSideStep (chrSheetTraits.traitsStrength.traitDiceSet) (b^.activeBonusValue))) <$> bMay
-    blessingEffect Chastise = Just $ ("Chastise", faithSub (chrSheetTraits.traitsMien.traitAptitudes.mienOverawe))
-    blessingEffect RefugeOFaith = Just $ ("Refuge o' Faith", faithSub (chrSheetTraits.traitsNimbleness.traitAptitudes.nimblenessDodge))
-    blessingEffect LayOnHands = Just $ ("Lay on Hands", Special)
-    blessingEffect HolyRoller = Just $ ("Holy Roller", Special)
-    blessingEffect Protection = Just $ ("Protection", Special)
-    blessingEffect Confession = Just $ ("Confession", Special)
-    blessingEffect MagicResistant = Just $ ("Magic Resistant", Special)
+    blessingEffect :: DSum Blessings Identity -> Maybe (EffectName,EffectValue)
+    blessingEffect (ArmorOfRighteousness :=> Identity bMay) = (\lab -> (en "Armor o' Righteousness", LightArmorBonus $ lab ^. activeBonusValue. to fromNat)) <$> bMay
+    blessingEffect (Smite :=> Identity bMay) = (\b -> (en "Smite", DiceSideStep (chrSheetTraits.traitsStrength.traitDiceSet) (b^.activeBonusValue))) <$> bMay
+    blessingEffect (Chastise :=> _) = Just $ (en "Chastise", faithSub (chrSheetTraits.traitsMien.traitAptitudes.mienOverawe))
+    blessingEffect (RefugeOFaith :=> _) = Just $ (en "Refuge o' Faith", faithSub (chrSheetTraits.traitsNimbleness.traitAptitudes.nimblenessDodge))
+    blessingEffect (LayOnHands :=> _) = Just $ (en "Lay on Hands", Special)
+    blessingEffect (HolyRoller :=> _) = Just $ (en "Holy Roller", Special)
+    blessingEffect (Protection :=> _) = Just $ (en "Protection", Special)
+    blessingEffect (Confession :=> _) = Just $ (en "Confession", Special)
+    blessingEffect (MagicResistant :=> _) = Just $ (en "Magic Resistant", Special)
 
 
 
-calculateEdgeEffects :: Set Edges -> EffectMap
-calculateEdgeEffects = Map.fromList . fmap edgeEffect . toList
+calculateEdgeEffects :: EdgesMap -> EffectMap
+calculateEdgeEffects = Map.fromList . fmap edgeEffect . DMap.toList
   where
-    edgeEffect ArcaneBlessed = ("Arcane (Blessed)", Special)
-    edgeEffect Brave = ("Brave",Bonus (chrSheetTraits.traitsSpirit.traitAptitudes.spiritGuts.diceSetBonus) 2)
-    edgeEffect LevelHeaded = ("Level Headed", Special)
-    edgeEffect NervesOfSteel = ("Nerves o' Steel", Special)
-    edgeEffect TheStare = ("The Stare", Bonus (chrSheetTraits.traitsMien.traitAptitudes.mienOverawe.diceSetBonus) 2)
+    edgeEffect :: DSum Edges Identity -> (EffectName,EffectValue)
+    edgeEffect (ArcaneBlessed :=> _) = (en "Arcane (Blessed)", Special)
+    edgeEffect (Brave :=> _) = (en "Brave",Bonus (chrSheetTraits.traitsSpirit.traitAptitudes.spiritGuts.diceSetBonus) 2)
+    edgeEffect (LevelHeaded :=> _) = (en "Level Headed", Special)
+    edgeEffect (NervesOfSteel :=> _) = (en "Nerves o' Steel", Special)
+    edgeEffect (TheStare :=> _) = (en "The Stare", Bonus (chrSheetTraits.traitsMien.traitAptitudes.mienOverawe.diceSetBonus) 2)
 
-calculateHinderanceEffects :: Set Hinderances -> EffectMap
-calculateHinderanceEffects = Map.fromList . fmap hinderanceEffect . toList
+calculateHinderanceEffects :: HinderancesMap -> EffectMap
+calculateHinderanceEffects = Map.fromList . fmap hinderanceEffect . DMap.toList
   where
-    hinderanceEffect Heroic     = ("Heroic", Special)
-    hinderanceEffect OathChurch = ("Oath (Church)", Special)
-    hinderanceEffect Ferner     = ("Ferner", Special)
-    hinderanceEffect Poverty    = ("Poverty", Special)
+    hinderanceEffect :: DSum Hinderances Identity -> (EffectName,EffectValue)
+    hinderanceEffect (Heroic :=> _) = (en "Heroic", Special)
+    hinderanceEffect (OathChurch :=> _) = (en "Oath (Church)", Special)
+    hinderanceEffect (Ferner :=> _) = (en "Ferner", Special)
+    hinderanceEffect (Poverty :=> _)    = (en "Poverty", Special)
 
-calculateKnackEffects :: Set Knacks -> EffectMap
-calculateKnackEffects = Map.fromList . fmap knackEffect . toList
+calculateKnackEffects :: KnacksMap -> EffectMap
+calculateKnackEffects = Map.fromList . fmap knackEffect . DMap.toList
   where
-    knackEffect BornOnChristmas = ("Born on Christmas", Special)
+    knackEffect :: DSum Knacks Identity -> (EffectName,EffectValue)
+    knackEffect (BornOnChristmas :=> _) = (en "Born on Christmas", Special)
 
 gabriela :: CharacterSheet Nat
 gabriela = CharacterSheet
@@ -378,23 +422,32 @@ gabriela = CharacterSheet
       , _spiritGuts  = 4
       }
     }
-  , _chrSheetEdges = Set.fromList
-    [ArcaneBlessed, Brave, LevelHeaded, NervesOfSteel, TheStare]
-  , _chrSheetHinderances = Set.fromList
-    [OathChurch, Ferner, Poverty, Heroic]
-  , _chrSheetBlessings = Set.fromList
-    [ ArmorOfRighteousness (Just $ ActiveBonus 1 9)
-    , Smite (Just $ ActiveBonus 1 5)
-    , Chastise
-    , Confession
-    , LayOnHands
-    , HolyRoller
-    , Protection
-    , MagicResistant
-    , RefugeOFaith
+  , _chrSheetEdges = DMap.fromList
+    [ ArcaneBlessed ==> ()
+    , Brave ==> ()
+    , LevelHeaded ==> ()
+    , NervesOfSteel ==> ()
+    , TheStare ==> ()
     ]
-  , _chrSheetKnacks = Set.fromList
-    [BornOnChristmas]
+  , _chrSheetHinderances = DMap.fromList
+    [ OathChurch ==> ()
+    , Ferner ==> ()
+    , Poverty ==> ()
+    , Heroic ==> ()
+    ]
+  , _chrSheetBlessings = DMap.fromList
+    [ ArmorOfRighteousness ==> (Just $ ActiveBonus 1 9)
+    , Smite ==> (Just $ ActiveBonus 1 5)
+    , Chastise ==> ()
+    , Confession ==> ()
+    , LayOnHands ==> ()
+    , HolyRoller ==> ()
+    , Protection ==> ()
+    , MagicResistant ==> ()
+    , RefugeOFaith ==> ()
+    ]
+  , _chrSheetKnacks = DMap.fromList
+    [BornOnChristmas ==> ()]
   , _chrSheetSize = 6
   , _chrSheetLightArmor = 0
   , _chrSheetBackground = CharacterBackground

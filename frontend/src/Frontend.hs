@@ -10,9 +10,10 @@ module Frontend where
 import           Control.Lens
 
 import           Clay                     (render)
+import           Data.Foldable            (fold)
 import           Data.Functor             (void)
 import qualified Data.Map                 as Map
-import           Data.Monoid.Endo         (Endo (Endo), runEndo)
+import           Data.Monoid.Endo         (Endo (Endo), mapEndo, runEndo)
 import           Data.Number.Nat          (Nat, fromNat)
 import qualified Data.Text.Lazy           as TL
 import           Data.Text.Lens           (packed)
@@ -23,7 +24,7 @@ import           Reflex.Dom
 import           Common.CharacterSheet
 import           Common.DiceSet
 import           Common.Route
-import           Frontend.Internal        (diffDyn, fget)
+import           Frontend.Internal        (diffDyn, fget, overEndo)
 import           Frontend.Spells          (blessings, edges, hinderances,
                                            knacks)
 import           Frontend.Style
@@ -73,11 +74,13 @@ frontend = Frontend
             (fget (chrSheetTraits.traitsVigor.traitDiceSet.diceSetSides.to sidesToNat.to (*2)) chrDyn)
             (fget chrSheetLightArmor chrDyn)
             (Limbs 0 0 (Just 0) (Just 0) (Just 0) (Just 0))
-        elClass "div" "spells" $ do
-          void $ blessings (fget chrSheetBlessings chrDyn)
+        spellEffectsEv <- elClass "div" "spells" $ do
+          blessChangeEv <- fmap (overEndo chrSheetBlessings) <$>
+            blessings (fget chrSheetTraits chrDyn) (fget chrSheetBlessings chrDyn)
           void $ edges (fget chrSheetEdges chrDyn)
           void $ hinderances (fget chrSheetHinderances chrDyn)
           void $ knacks (fget chrSheetKnacks chrDyn)
-        pure (woundEffects maxWoundsDyn)
+          pure $ blessChangeEv
+        pure $ fold [woundEffects maxWoundsDyn, spellEffectsEv]
       pure ()
   }

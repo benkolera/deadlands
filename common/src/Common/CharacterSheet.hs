@@ -281,18 +281,19 @@ data EffectValue
     (Lens' (CharacterSheet DiceSet) DiceSet)
     (Lens' (CharacterSheet DiceSet) DiceSet)
 
-data EffectCreator = NoArgument EffectValue
-  | AptitudeCheckSuccesses Nat1 (Lens' (CharacterSheet DiceSet) DiceSet) (Integer -> EffectValue)
-  | AptitudeCheckValue Nat1 (Lens' (CharacterSheet DiceSet) DiceSet) (Integer -> EffectValue)
+data EffectMetaMetaValue k
+  = PassiveEffect
+  | AptitudeCheckEffect Nat1 Nat1 DiceSet (Maybe ActiveBonus) (Maybe ActiveBonus -> Endo (DMap k Identity))
 
 newtype EffectName = EffectName { unEffectName :: T.Text } deriving (Eq, Ord, Show)
 makeWrapped ''EffectName
 
 type EffectMap = Map EffectName EffectValue
 
-data EffectMeta = EffectMeta
+data EffectMeta k = EffectMeta
   { _effectMetaDesc     :: Text
   , _effectMetaLongDesc :: [Text]
+  , _effectMetaMetaVal  :: EffectMetaMetaValue k
   }
 makeLenses ''EffectMeta
 

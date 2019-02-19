@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE RankNTypes            #-}
@@ -11,22 +12,22 @@ module Frontend.Wounds where
 
 import           Control.Lens
 
-import           Control.Lens.TH         (makeLenses)
 import           Control.Monad.Fix       (MonadFix)
 import           Data.Bool               (bool)
 import           Data.Functor            (void)
-import           Data.List.NonEmpty      (NonEmpty ((:|)))
-import qualified Data.Map                   as Map
+import qualified Data.Map                as Map
 import           Data.Maybe              (fromMaybe, maybe)
-import           Data.Number.Nat         (Nat, toNat)
+import           Data.Monoid.Endo        (Endo (Endo))
+import           Data.Number.Nat         (Nat, fromNat, toNat)
 import           Data.Number.Nat1        (Nat1, fromNat1)
-import           Data.Semigroup          (Max (Max, getMax))
-import           Data.Semigroup.Foldable (foldMap1)
 import qualified Data.Text               as T
 import           Reflex.Dom
 
 --import           Frontend.Internal          (fget)
 --import           Obelisk.Generated.Static
+
+import           Common.CharacterSheet
+import           Frontend.Internal       (fget)
 
 data LimbTarget   = LeftLeg | RightLeg | Torso | LeftArm | RightArm | Head deriving (Ord, Eq)
 data DamageTarget = Wind | Wounds | Damage deriving (Eq, Ord)
@@ -52,70 +53,53 @@ woundCssClass lt level = limbCssClass <> maybe "" ((" " <>) . T.toLower) (woundD
       LeftLeg  -> "lleg"
       RightLeg -> "rleg"
 
-data Limbs = Limbs
-  { _limbsHead     :: Nat
-  , _limbsTorso    :: Nat
-  , _limbsLeftArm  :: (Maybe Nat)
-  , _limbsRightArm :: (Maybe Nat)
-  , _limbsLeftLeg  :: (Maybe Nat)
-  , _limbsRightLeg :: (Maybe Nat)
-  }
-makeLenses ''Limbs
-
-changeWounds :: LimbTarget -> (Nat1, Damage) -> Nat -> Nat
-changeWounds et (s,dd) = case dd of
-  (WindDamage _)      -> id
-  (WoundDamage lt w) -> if (lt == et) then (clampMod (+ w)) else id
-  (RawDamage lt d)    -> if (lt == et) then (clampMod (+ (fromIntegral $ damageToWounds d))) else id
-  where
-    clampMod :: (Integer -> Integer) -> Nat -> Nat
-    clampMod f n = if r < 0 then 0 else if r > 5 then 5 else toNat r
-      where r = f . fromIntegral $ n
-    damageToWounds :: Nat -> Nat
-    damageToWounds d  = toNat @Integer $ (fromIntegral d) `div` (fromNat1 s)
-
-changeWoundsLimb :: LimbTarget -> (Nat1, Damage) -> Maybe Nat -> Maybe Nat
-changeWoundsLimb lt t = fmap (changeWounds lt t)
-
-changeWind :: (Nat1, Damage) -> Integer -> Integer
-changeWind (maxWind, (WindDamage l)) = (\x -> min (fromNat1 maxWind) (x - l))
-changeWind _                         = id
 
 makeDamage :: DamageTarget -> Maybe LimbTarget -> Integer -> Maybe Damage
 makeDamage dt ltMay l = case dt of
+  -- TODO: When you take -maxWounds wind damage, you take a guts wound.
+  -- TODO: At the end of every round when you have wound mod > 2, take 1 wind dmg each round
   Wounds -> WoundDamage <$> ltMay <*> pure l
   Damage -> RawDamage <$> ltMay <*> (if l < 0 then Nothing else (Just $ toNat l))
   Wind   -> Just $ WindDamage l
 
+applyDamage :: CharSize -> LightArmor -> Damage -> Endo CharacterHealth
+applyDamage cs la = \case
+  (WindDamage d)     -> Endo $ chrHealthWindDamage %~ clampModNat (+ d)
+  (WoundDamage lt d) -> Endo $
+    chrHealthLimbDamage.(limbTargetSetter lt) %~ clampModNat (+d)
+  (RawDamage lt d)   -> Endo $
+    chrHealthLimbDamage.(limbTargetSetter lt) %~ clampModNat (+ (fromNat (damageToWounds cs la d)))
+  where
+    limbTargetSetter :: LimbTarget -> ASetter' LimbDamage Nat
+    limbTargetSetter = \case
+      Head     -> limbDamageHead
+      Torso    -> limbDamageTorso
+      LeftArm  -> limbDamageLeftArm._Just
+      RightArm -> limbDamageRightArm._Just
+      LeftLeg  -> limbDamageLeftLeg._Just
+      RightLeg -> limbDamageRightLeg._Just
+
 wounds
   :: (MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m, DomBuilderSpace m ~ GhcjsDomSpace)
-  => Dynamic t Nat1
+  => Dynamic t CharSize
   -> Dynamic t Nat1
-  -> Dynamic t Nat
-  -> Limbs
-  -> m (Dynamic t Nat)
-wounds sizeDyn maxWindDyn lightArmorDyn limbs = elClass "div" "wounds-tracker" $ mdo
+  -> Dynamic t LightArmor
+  -> Dynamic t CharacterHealth
+  -> m (Event t (Endo CharacterHealth))
+wounds sizeDyn maxWindDyn lightArmorDyn healthDyn = elClass "div" "wounds-tracker" $ mdo
   el "h2" $ text "Wounds"
-  let dmgSizeE = attach (current sizeDyn) dmgE
-  woundsHeadDyn     <- foldDyn (changeWounds Head) (limbs^.limbsHead) dmgSizeE
-  woundsTorsoDyn    <- foldDyn (changeWounds Torso) (limbs^.limbsTorso) $ dmgSizeE
-  woundsLeftArmDyn  <- foldDyn (changeWoundsLimb LeftArm) (limbs^.limbsLeftArm) $ dmgSizeE
-  woundsRightArmDyn <- foldDyn (changeWoundsLimb RightArm) (limbs^.limbsRightArm) $ dmgSizeE
-  woundsLeftLegDyn  <- foldDyn (changeWoundsLimb LeftLeg) (limbs^.limbsLeftLeg) dmgSizeE
-  woundsRightLegDyn <- foldDyn (changeWoundsLimb RightLeg) (limbs^.limbsRightLeg) dmgSizeE
-  windMaxInit       <- sample . current $ maxWindDyn
-  windDyn           <- foldDyn changeWind (fromNat1 windMaxInit) $ attach (current maxWindDyn) dmgE
   let
-    maxWounds = fmap (getMax . foldMap1 Max) . sequence
-    maxWoundsDyn = maxWounds $ woundsHeadDyn :|
-        [ woundsTorsoDyn
-        , fromMaybe 0 <$> woundsLeftArmDyn
-        , fromMaybe 0 <$> woundsRightArmDyn
-        , fromMaybe 0 <$> woundsLeftLegDyn
-        , fromMaybe 0 <$> woundsRightLegDyn
-        ]
-    deadDyn = (> 4) <$> maxWounds (woundsHeadDyn :| [woundsTorsoDyn])
-
+    woundsHeadDyn     = fget (chrHealthLimbDamage.limbDamageHead) healthDyn
+    woundsTorsoDyn    = fget (chrHealthLimbDamage.limbDamageTorso) healthDyn
+    woundsLeftArmDyn  = fget (chrHealthLimbDamage.limbDamageLeftArm) healthDyn
+    woundsRightArmDyn = fget (chrHealthLimbDamage.limbDamageRightArm) healthDyn
+    woundsLeftLegDyn  = fget (chrHealthLimbDamage.limbDamageLeftLeg) healthDyn
+    woundsRightLegDyn = fget (chrHealthLimbDamage.limbDamageRightLeg) healthDyn
+    deadDyn           = fget (chrHealthLimbDamage.to isDead) healthDyn
+    maxWoundsDyn      = fget (chrHealthLimbDamage.to maxWounds) healthDyn
+    windDyn           = (\m d -> (fromNat1 m - fromNat d)::Integer)
+                          <$> maxWindDyn
+                          <*> fget chrHealthWindDamage healthDyn
   elClass "div" "wounds-container" $ do
     let wounds' = elClass "div" "wounds" $ do
           elDynAttr "div" (("class" =:) . woundCssClass Head <$> woundsHeadDyn)     blank
@@ -140,10 +124,10 @@ wounds sizeDyn maxWindDyn lightArmorDyn limbs = elClass "div" "wounds-tracker" $
         dynText $ maybe "" (\d -> "(" <> d <> ")") . woundDesc <$> maxWoundsDyn
     el "div" $ do
       el "span" $ text "Light Armor: "
-      el "span" $ display lightArmorDyn
+      el "span" $ display (unLightArmor <$> lightArmorDyn)
     el "div" $ do
       el "span" $ text "Size: "
-      el "span" $ display sizeDyn
+      el "span" $ display (unCharSize <$> sizeDyn)
   dmgE <- elClass "div" "damage-form" $ do
     let damageOptsDyn = constDyn (Map.fromList [(Damage,"Damage"),(Wind,"Wind"),(Wounds,"Wounds")])
     damageDd <- dropdown Damage damageOptsDyn $ def
@@ -167,4 +151,4 @@ wounds sizeDyn maxWindDyn lightArmorDyn limbs = elClass "div" "wounds-tracker" $
         (text "Apply")
       pure $ domEvent Click bElt
     pure . fmapMaybe id $ (current damageDyn) <@ applyE
-  pure $ maxWoundsDyn
+  pure $ applyDamage <$> current sizeDyn <*> current lightArmorDyn <@> dmgE

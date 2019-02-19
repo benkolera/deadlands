@@ -48,7 +48,12 @@ blessingsMap ts = Map.fromList . fmap blessingMeta . DMap.toList
         , "Armor o’ righteousness provides this protection against all damage suffered during the round. Additional effects from the attack that rely on damage being dealt (such as a rattlesnake’s poison) are lost if armor negates enough damage to prevent all wound levels."
         , "Once the damage has been reduced by the armor, any wound levels caused by the remaining damage incur Wind loss as normal. However, against brawling attacks, which normally cause only Wind loss, the armor does reduce the amount of Wind lost."
         ]
-      (Smite :=> _) -> toEffectTuple "Smite" PassiveEffect
+      (Smite :=> Identity mab) -> toEffectTuple "Smite"
+        (AptitudeCheckEffect 5 20
+         (ts^.traitsSpirit.traitAptitudes.spiritFaith)
+         mab
+         (Endo . DMap.insert Smite . Identity)
+        )
         "Improve strength dice face for 1 minute."
         [ "With this miracle, the blessed heroes of the Weird West can smite the evils of the Reckoning back into the last century."
         , "When invoked, the invoker’s Strength die type is raised +1 step for every success."
@@ -215,12 +220,13 @@ effectsSection title eMapDyn = elClass "div" "effects-section" $ do
     effectInput (AptitudeCheckEffect tn rnds ds abMay mkEndo) = do
       text . T.pack . show $ abMay
       buttClick <- button "go"
-      pure $ (mkEndo (Just (ActiveBonus 1 42))) <$ buttClick
+      pure $ (mkEndo (Just (ActiveBonus 1 3))) <$ buttClick
     longDesc l = mdo
       openDyn <- foldDyn (const not) False toggleE
       (buttEl,_) <- elClass' "button" "toggle-desc" . dynText . fmap (bool "expand" "hide") $ openDyn
       let toggleE = domEvent Click buttEl
       let linePs = elClass "div" "long-desc" $ traverse_ (el "p" . text) l
+      -- TODO: Make this an actual form
       let next = bool blank linePs <$> updated openDyn
       void $ widgetHold blank next
       pure ()

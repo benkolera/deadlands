@@ -6,8 +6,7 @@ import           Control.Lens
 import           Control.Lens.TH  (makeLenses, makePrisms)
 import           Data.Bool        (bool)
 import           Data.Foldable    (fold)
-import           Data.Number.Nat  (Nat, fromNat)
-import           Data.Number.Nat1 (Nat1)
+import           Data.Number.Nat1 (Nat1, fromNat1)
 import           Data.Semigroup   ((<>))
 import           Data.Text        (Text)
 import           Data.Text.Lens   (_Text)
@@ -52,7 +51,7 @@ stepHelper mx ds | ds ^. diceSetSides >= mx =  ds & diceSetSides .~ mx & diceSet
 stepHelper _  ds = ds & diceSetSides %~ succ
 
 data TnCheck = TnCheck
-  { _tnCheckTn        :: Nat
+  { _tnCheckTn        :: Nat1
   , _tnCheckSuccesses :: Bool
   } deriving (Eq, Show)
 makeLenses ''TnCheck
@@ -71,7 +70,7 @@ toFgCode (SetVsTn (TnCheck tn s)) ds = fold
   , (ds ^. diceSetSides . to show . from _Text)
   , "!"
   , "kt"
-  , (max 0 $ fromNat tn - (ds ^. diceSetBonus)) ^. to show . from _Text
+  , (max 0 $ fromNat1 tn - (ds ^. diceSetBonus)) ^. to show . from _Text
   , bool "" "s5" s
   ]
 toFgCode StandardSet  ds = ds ^. to show . from _Text . to dieCode

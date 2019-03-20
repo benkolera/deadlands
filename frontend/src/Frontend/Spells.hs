@@ -4,8 +4,8 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE RecursiveDo           #-}
-{-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 module Frontend.Spells where
@@ -17,19 +17,22 @@ import           Control.Monad.Fix     (MonadFix)
 import           Data.Bool             (bool)
 import           Data.Dependent.Map    (DMap, DSum ((:=>)))
 import qualified Data.Dependent.Map    as DMap
-import           Data.Foldable         (traverse_, toList)
+import           Data.Foldable         (toList, traverse_)
 import           Data.Functor          (void)
+import           Data.Functor.Compose  (Compose (..))
 import           Data.List.NonEmpty    (nonEmpty)
 import           Data.Map              (Map)
 import qualified Data.Map              as Map
-import           Data.Monoid.Endo      (Endo(Endo))
+import           Data.Maybe            (maybe)
+import           Data.Monoid.Endo      (Endo (Endo))
 import           Data.Text             (Text)
-import qualified Data.Text             as T
+import           GHCJS.DOM.Types       (MonadJSM)
 import           Reflex.Dom
 
 import           Common.CharacterSheet
 import           Common.DiceSet
-import           Frontend.Internal     (fget)
+import           Frontend.CopyPasta    (copyPasta)
+import           Frontend.Internal     (fget, readText, showText, (<<$>>))
 
 blessingsMap :: Traits DiceSet -> BlessingsMap -> Map EffectName (EffectMeta Blessings)
 blessingsMap ts = Map.fromList . fmap blessingMeta . DMap.toList
@@ -175,58 +178,85 @@ toEffectTuple :: Text -> (EffectMetaMetaValue k) -> Text -> [Text] -> (EffectNam
 toEffectTuple t emv sd ls = (EffectName t, EffectMeta sd ls emv)
 
 blessings
-  :: (MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m)
+  :: ( MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
+     , MonadJSM (Performable m), Prerender js m, HasDocument m, PerformEvent t m
+     )
   => Dynamic t (Traits DiceSet)
   -> Dynamic t BlessingsMap
   -> m (Event t (Endo BlessingsMap))
 blessings tsDyn = effectsSection "Blessings" . liftA2 blessingsMap tsDyn
 
 edges
-  :: (MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m)
+  :: ( MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
+     , MonadJSM (Performable m), Prerender js m, HasDocument m, PerformEvent t m
+     )
   => Dynamic t EdgesMap
   -> m (Event t (Endo EdgesMap))
 edges = effectsSection "Edges" . fmap edgesMap
 
 hinderances
-  :: (MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m)
+  :: ( MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
+     , MonadJSM (Performable m), Prerender js m, HasDocument m, PerformEvent t m
+     )
   => Dynamic t HinderancesMap
   -> m (Event t (Endo HinderancesMap))
 hinderances = effectsSection "Hinderances" . fmap hinderancesMap
 
 knacks
-  :: (MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m)
+  :: ( MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
+     , MonadJSM (Performable m), Prerender js m, HasDocument m, PerformEvent t m
+     )
   => Dynamic t KnacksMap
   -> m (Event t (Endo KnacksMap))
 knacks = effectsSection "Knacks" . fmap knacksMap
 
 effectsSection
-  :: (DomBuilder t m, PostBuild t m, MonadHold t m, MonadFix m)
+  :: forall t m js k
+  .  ( DomBuilder t m, PostBuild t m, MonadHold t m, MonadFix m
+     , MonadJSM (Performable m), Prerender js m, HasDocument m, PerformEvent t m
+     )
   => Text
   -> Dynamic t (Map EffectName (EffectMeta k))
   -> m (Event t (Endo (DMap k Identity)))
 effectsSection title eMapDyn = elClass "div" "effects-section" $ do
   el "h2" $ text title
   listEvs <- listWithKey eMapDyn $ \k emDyn -> elClass "div" "effect" $ mdo
-    elClass "span" "name" . text . unEffectName $ k
-    text ": "
-    elClass "span" "short-desc" . dynText . fget effectMetaDesc $ emDyn
-    void . dyn $ (fget effectMetaLongDesc emDyn) <&> (traverse_ longDesc . nonEmpty)
-    editEv <- dyn $ (fget effectMetaMetaVal emDyn) <&> effectInput
-    switchHold never editEv
+    el "div" $ do
+      elClass "span" "name" . text . unEffectName $ k
+      text ": "
+      elClass "span" "short-desc" . dynText . fget effectMetaDesc $ emDyn
+      void . dyn $ (fget effectMetaLongDesc emDyn) <&> (traverse_ longDesc . nonEmpty)
+    elClass "div" "effect-form" $ do
+      editEv <- dyn $ (fget effectMetaMetaVal emDyn) <&> effectInput
+      switchHold never editEv
   pure $ switchDyn (leftmost . toList <$> listEvs)
   where
-    effectInput :: (DomBuilder t m) => EffectMetaMetaValue k -> m (Event t (Endo (DMap k Identity)))
     effectInput PassiveEffect = pure never
     effectInput (AptitudeCheckEffect tn rnds ds abMay mkEndo) = do
-      text . T.pack . show $ abMay
-      buttClick <- button "go"
-      pure $ (mkEndo (Just (ActiveBonus 1 3))) <$ buttClick
+      copyPasta False (constDyn tn) (constDyn ds)
+      effectValI <- inputElement $ (def :: InputElementConfig EventResult t (DomBuilderSpace m))
+        & inputElementConfig_initialValue .~ (maybe "" (^.activeBonusValue.to showText) abMay)
+        & inputElementConfig_elementConfig .~ (def
+          & elementConfig_initialAttributes .~
+            (Map.fromList [("type", "number"),("min","1")]
+             <> foldMap (const ("disabled"=:"")) abMay)
+
+          )
+      let newEffect = getCompose $ ActiveBonus rnds
+            <$> (readText <<$>> (_inputElement_value effectValI))
+      buttClick <- button $ maybe "Activate" (const "Deactivate") abMay
+      traverse_
+        (elClass "span" "active-rounds" . text . roundsRemainingText . view activeBonusRoundsLeft)
+        abMay
+      pure $ mkEndo <$> (maybe (current newEffect) (const $ pure Nothing) abMay) <@ buttClick
+
+    roundsRemainingText 1 = "Active for 1 round"
+    roundsRemainingText n = "Active for " <> showText n <> " rounds"
     longDesc l = mdo
       openDyn <- foldDyn (const not) False toggleE
       (buttEl,_) <- elClass' "button" "toggle-desc" . dynText . fmap (bool "expand" "hide") $ openDyn
       let toggleE = domEvent Click buttEl
       let linePs = elClass "div" "long-desc" $ traverse_ (el "p" . text) l
-      -- TODO: Make this an actual form
       let next = bool blank linePs <$> updated openDyn
       void $ widgetHold blank next
       pure ()

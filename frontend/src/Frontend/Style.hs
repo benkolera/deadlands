@@ -292,4 +292,13 @@ style = do
             fontSize (em 0.8)
             padding (em 0.1) (em 0.1) (em 0.1) (em 0.1)
 
+          ".effect-form" ? do
+            ".dice-icon" ? do
+              position relative
+              top (em 0.3)
+            ".active-rounds" ? do
+              fontSize (em 0.8)
+              color green
+              marginLeft (em 0.2)
+
   pure ()

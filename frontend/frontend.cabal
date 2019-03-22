@@ -6,24 +6,32 @@ build-type: Simple
 library
   hs-source-dirs: src
   build-depends: base
+               , clay
                , common
                , containers
-               , clay
+               , dependent-map
                , endo
-               , jsaddle
                , ghcjs-dom
+               , jsaddle
                , lens
                , nat
                , obelisk-frontend
-               , obelisk-route
-               , reflex-dom
-               , semigroupoids
                , obelisk-generated-static
+               , obelisk-route
+               , reflex
+               , reflex-dom
+               , safe
+               , semigroupoids
                , text
   exposed-modules:
     Frontend
   other-modules:
-    Frontend.Style
+      Frontend.CopyPasta
+    , Frontend.Internal
+    , Frontend.Spells
+    , Frontend.Style
+    , Frontend.Traits
+    , Frontend.Wounds
   ghc-options: -Wall
 
 executable frontend
@@ -31,11 +39,11 @@ executable frontend
   hs-source-dirs: src-bin
   build-depends: base
                , common
+               , frontend
                , obelisk-frontend
+               , obelisk-generated-static
                , obelisk-route
                , reflex-dom
-               , obelisk-generated-static
-               , frontend
   --TODO: Make these ghc-options optional
   ghc-options: -threaded
   if os(darwin)

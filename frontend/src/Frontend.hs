@@ -23,6 +23,7 @@ import           Reflex.Dom
 import           Common.CharacterSheet
 import           Common.DiceSet
 import           Common.Route
+import           Frontend.CombatTracker   (combatTracker)
 import           Frontend.Internal        (diffDyn, fget, overEndo)
 import           Frontend.Spells          (blessings, edges, hinderances,
                                            knacks)
@@ -57,6 +58,7 @@ frontend = Frontend
       el "title" $ text "Deadlands Character Sheet"
       el "style" . text . TL.toStrict . render $ style
   , _frontend_body = elClass "div" "app" $ mdo
+      -- TODO: make this a event writer thing
       let initStats = calculateStatsDiceSets (gabriela ^. chrSheetStats)
       let initBg    = gabriela ^. chrSheetBackground
       let applyBgEffects = runEndo initStats . effectsToCharSheet . calculateCharacterBgEffects
@@ -66,13 +68,15 @@ frontend = Frontend
         elClass "div" "traits" $ do
           traits (fget chrStatsTraits statsDyn)
           blank
-        healthEffectsE <- elClass "div" "effects" $ do
+        effectsEffectsE <- elClass "div" "effects" $ do
           info bgDyn
-          fmap (overEndo chrBgHealth) <$> wounds
+          (_,combatEffectsE) <- runEventWriterT $ combatTracker
+          healthEffectsE <- fmap (overEndo chrBgHealth) <$> wounds
             (fget chrStatsSize statsDyn)
             (maxWind <$> statsDyn)
             (fget chrStatsLightArmor statsDyn)
             (fget chrBgHealth bgDyn)
+          pure $ healthEffectsE <> combatEffectsE
         spellEffectsEv <- elClass "div" "spells" $ do
           blessChangeEv <- fmap (overEndo chrBgBlessings) <$>
             blessings (fget chrStatsTraits statsDyn) (fget chrBgBlessings bgDyn)
@@ -80,6 +84,6 @@ frontend = Frontend
           void $ hinderances (fget chrBgHinderances bgDyn)
           void $ knacks (fget chrBgKnacks bgDyn)
           pure $ blessChangeEv
-        pure $ healthEffectsE <> spellEffectsEv
+        pure $ effectsEffectsE <> spellEffectsEv
       pure ()
   }

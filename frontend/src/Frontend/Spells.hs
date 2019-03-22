@@ -170,8 +170,14 @@ knacksMap = Map.fromList . fmap knackMeta . DMap.toList
     knackMeta :: DSum Knacks Identity -> (EffectName, EffectMeta Knacks)
     knackMeta h = case h of
       (BornOnChristmas :=> _) -> toEffectTuple "Born On Christmas" PassiveEffect
-        ""
-        []
+        "Can spend chips to grant immunity to dark magics"
+        [ "A babe born on Christmas is particularly resistant to arcane effects powered by evil spirits. If your character takes this knack and has the arcane background Edge, she may only be a blessed or a shaman. The knack has no effect on shamanic or blessed powers. It works on the tainted magic of hexes, weird gizmos, and black magic."
+        , "Your character can use this knack even if she isn’t aware she’s a target of some foul magic She cannot, however, use the knack against a magic-using character who isn’t using an arcane effect directly on the heroine. If your buffalo gal sees a huckster cast a hex on himself or someone else, for instance, there’s nothing she can do about it."
+        , "White: Against any type of damagecausing magic, a white chip provides 1 point of Armor. Against a resisted spell effect, the character gets to add +4 to his roll."
+        , "Red: As above, but it gives 2 points of Armor and adds +4 to your heroine’s resistance roll (if there is one). A red chip is not cumulative with a white."
+        , "Blue: A blue chip forces a backfire of some sort. Hucksters roll on the Backlash Table, mad scientists suffer a malfunction, and cultists get spanked by their dark masters for their incompetence. If the effect is caused by a creature’s special ability with no “backfire” results, the spell simply doesn’t affect your heroine."
+        , "Legend: When a tainted supernatural spell or power affects your character, spend a Legend chip to make him immune to all the powers of the creature who cast it for the rest of the scene. A vampire could not charm the hero, for instance, but it could still bite her on the neck since that isn’t a supernatural power."
+        ]
 
 toEffectTuple :: Text -> (EffectMetaMetaValue k) -> Text -> [Text] -> (EffectName, EffectMeta k)
 toEffectTuple t emv sd ls = (EffectName t, EffectMeta sd ls emv)

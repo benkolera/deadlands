@@ -10,15 +10,16 @@
 module Frontend.Traits where
 
 import           Control.Lens
+import           Reflex.Dom
 
 import           Control.Monad            (when)
 import           Control.Monad.Fix        (MonadFix)
 import           Data.Bool                (bool)
 import           Data.Foldable            (traverse_)
 import qualified Data.Map                 as Map
+import           Data.Maybe               (fromMaybe)
 import qualified Data.Text                as T
-import           GHCJS.DOM.Types          (MonadJSM)
-import           Reflex.Dom
+import           Safe                     (readMay)
 
 import           Common.CharacterSheet
 import           Common.DiceSet
@@ -28,7 +29,7 @@ import           Obelisk.Generated.Static
 
 traitName
   :: (MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
-     , Prerender js m, PerformEvent t m, MonadJSM (Performable m), HasDocument m
+     , Prerender js m, PerformEvent t m, HasDocument m
      )
   => T.Text
   -> Dynamic t DiceSet
@@ -57,7 +58,7 @@ concentration cn getter childLis tDyn = do
 diceCodeRoller
   :: forall t m js
   .  ( MonadFix m, MonadHold t m, DomBuilder t m, PostBuild t m
-     , PerformEvent t m, HasDocument m, MonadJSM (Performable m)
+     , PerformEvent t m, HasDocument m
      , Prerender js m
      )
   => Dynamic t DiceSet
@@ -76,7 +77,7 @@ diceCodeRoller tdsDyn forTrait = do
             & inputElementConfig_initialValue .~ "5"
             & inputElementConfig_elementConfig.elementConfig_initialAttributes .~
               (Map.fromList [("min","1"),("class","tn-input"),("type","number")])
-        let tnDyn = read . T.unpack <$> (tn^.to _inputElement_value)
+        let tnDyn = fromMaybe 0 . readMay . T.unpack <$> (tn^.to _inputElement_value)
         elClass "ul" "dice-codes" $ do
           when forTrait . el "li" $ copyPastaWithLabel "Untrained" tnDyn tdsDyn
           el "li" $ copyPastaWithLabel "Normal" tnDyn tdsDyn
@@ -90,7 +91,7 @@ diceCodeRoller tdsDyn forTrait = do
 aptitude
   :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m
      , PerformEvent t m, Prerender js m
-     , MonadJSM (Performable m), HasDocument m)
+     , HasDocument m)
   => T.Text
   -> Dynamic t DiceSet
   -> m ()
@@ -101,7 +102,7 @@ aptitude aName dsDyn = elClass "li" "aptitude" $ do
 
 concentrationAptitude
   :: (MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
-     , Prerender js m, MonadJSM (Performable m)
+     , Prerender js m
      , PerformEvent t m, HasDocument m)
   => T.Text
   -> Getter a Bool
@@ -117,7 +118,7 @@ concentrationAptitude label g cDyn = do
 
 pureAptitude
   :: (MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
-     , Prerender js m, MonadJSM (Performable m)
+     , Prerender js m
      , PerformEvent t m, HasDocument m)
   => T.Text
   -> Getter (a DiceSet) DiceSet
@@ -129,7 +130,7 @@ pureAptitude name getter tDyn =
 trait
   :: (MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
      , Prerender js m, PerformEvent t m
-     , MonadJSM (Performable m), HasDocument m)
+     , HasDocument m)
   => Dynamic t s
   -> T.Text
   -> Getter s (Trait a DiceSet)
@@ -144,7 +145,7 @@ trait traitsDyn tLabel tGetter aptitudes =
 traits
   :: ( MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
      , Prerender js m, PerformEvent t m
-     , MonadJSM (Performable m), HasDocument m
+     , HasDocument m
      )
   => Dynamic t (Traits DiceSet)
   -> m ()

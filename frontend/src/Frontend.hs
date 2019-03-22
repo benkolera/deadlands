@@ -56,7 +56,7 @@ frontend = Frontend
   { _frontend_head = do
       el "title" $ text "Deadlands Character Sheet"
       el "style" . text . TL.toStrict . render $ style
-  , _frontend_body = prerender (text "Loading...") $ elClass "div" "app" $ mdo
+  , _frontend_body = elClass "div" "app" $ mdo
       let initStats = calculateStatsDiceSets (gabriela ^. chrSheetStats)
       let initBg    = gabriela ^. chrSheetBackground
       let applyBgEffects = runEndo initStats . effectsToCharSheet . calculateCharacterBgEffects

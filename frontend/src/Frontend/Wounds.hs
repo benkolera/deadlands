@@ -11,23 +11,24 @@
 module Frontend.Wounds where
 
 import           Control.Lens
-
-import           Control.Monad.Fix       (MonadFix)
-import           Data.Bool               (bool)
-import           Data.Functor            (void)
-import qualified Data.Map                as Map
-import           Data.Maybe              (fromMaybe, maybe)
-import           Data.Monoid.Endo        (Endo (Endo))
-import           Data.Number.Nat         (Nat, fromNat, toNat)
-import           Data.Number.Nat1        (Nat1, fromNat1)
-import qualified Data.Text               as T
 import           Reflex.Dom
+
+import           Control.Monad.Fix     (MonadFix)
+import           Data.Bool             (bool)
+import           Data.Functor          (void)
+import qualified Data.Map              as Map
+import           Data.Maybe            (fromMaybe, maybe)
+import           Data.Monoid.Endo      (Endo (Endo))
+import           Data.Number.Nat       (Nat, fromNat, toNat)
+import           Data.Number.Nat1      (Nat1, fromNat1)
+import qualified Data.Text             as T
+import           Safe                  (readMay)
 
 --import           Frontend.Internal          (fget)
 --import           Obelisk.Generated.Static
 
 import           Common.CharacterSheet
-import           Frontend.Internal       (fget)
+import           Frontend.Internal     (fget)
 
 data LimbTarget   = LeftLeg | RightLeg | Torso | LeftArm | RightArm | Head deriving (Ord, Eq)
 data DamageTarget = Wind | Wounds | Damage deriving (Eq, Ord)
@@ -80,7 +81,7 @@ applyDamage cs la = \case
       RightLeg -> limbDamageRightLeg._Just
 
 wounds
-  :: (MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m, DomBuilderSpace m ~ GhcjsDomSpace)
+  :: (MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m)
   => Dynamic t CharSize
   -> Dynamic t Nat1
   -> Dynamic t LightArmor
@@ -140,10 +141,10 @@ wounds sizeDyn maxWindDyn lightArmorDyn healthDyn = elClass "div" "wounds-tracke
                 ]
       targetOptsDyn = calcTargets <$> damageDd^.dropdown_value
     targetDd <- dropdown Nothing targetOptsDyn $ def
-    ti <- textInput $ def
-      & textInputConfig_initialValue .~ "0"
-      & textInputConfig_inputType    .~ "number"
-    let dmgLevelDyn = read . T.unpack <$> (ti^.textInput_value)
+    ti <- inputElement $ def
+      & inputElementConfig_initialValue .~ "0"
+      & inputElementConfig_elementConfig.elementConfig_initialAttributes .~ ("type" =: "number")
+    let dmgLevelDyn = fromMaybe 0 . readMay . T.unpack <$> (ti^.to _inputElement_value)
     let damageDyn = makeDamage <$> damageDd^.dropdown_value <*> targetDd^.dropdown_value <*> dmgLevelDyn
     applyE <- do
       (bElt,_) <- elDynAttr' "button"

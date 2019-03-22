@@ -26,7 +26,6 @@ import qualified Data.Map              as Map
 import           Data.Maybe            (maybe)
 import           Data.Monoid.Endo      (Endo (Endo))
 import           Data.Text             (Text)
-import           GHCJS.DOM.Types       (MonadJSM)
 import           Reflex.Dom
 
 import           Common.CharacterSheet
@@ -179,7 +178,7 @@ toEffectTuple t emv sd ls = (EffectName t, EffectMeta sd ls emv)
 
 blessings
   :: ( MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
-     , MonadJSM (Performable m), Prerender js m, HasDocument m, PerformEvent t m
+     , Prerender js m, HasDocument m, PerformEvent t m
      )
   => Dynamic t (Traits DiceSet)
   -> Dynamic t BlessingsMap
@@ -188,7 +187,7 @@ blessings tsDyn = effectsSection "Blessings" . liftA2 blessingsMap tsDyn
 
 edges
   :: ( MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
-     , MonadJSM (Performable m), Prerender js m, HasDocument m, PerformEvent t m
+     , Prerender js m, HasDocument m, PerformEvent t m
      )
   => Dynamic t EdgesMap
   -> m (Event t (Endo EdgesMap))
@@ -196,7 +195,7 @@ edges = effectsSection "Edges" . fmap edgesMap
 
 hinderances
   :: ( MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
-     , MonadJSM (Performable m), Prerender js m, HasDocument m, PerformEvent t m
+     , Prerender js m, HasDocument m, PerformEvent t m
      )
   => Dynamic t HinderancesMap
   -> m (Event t (Endo HinderancesMap))
@@ -204,7 +203,7 @@ hinderances = effectsSection "Hinderances" . fmap hinderancesMap
 
 knacks
   :: ( MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
-     , MonadJSM (Performable m), Prerender js m, HasDocument m, PerformEvent t m
+     , Prerender js m, HasDocument m, PerformEvent t m
      )
   => Dynamic t KnacksMap
   -> m (Event t (Endo KnacksMap))
@@ -213,7 +212,7 @@ knacks = effectsSection "Knacks" . fmap knacksMap
 effectsSection
   :: forall t m js k
   .  ( DomBuilder t m, PostBuild t m, MonadHold t m, MonadFix m
-     , MonadJSM (Performable m), Prerender js m, HasDocument m, PerformEvent t m
+     , Prerender js m, HasDocument m, PerformEvent t m
      )
   => Text
   -> Dynamic t (Map EffectName (EffectMeta k))

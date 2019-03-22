@@ -14,7 +14,6 @@ import qualified Data.Map                   as Map
 import           Data.Number.Nat1           (Nat1)
 import qualified GHCJS.DOM.Document         as JsDocument
 import qualified GHCJS.DOM.HTMLInputElement as JsInput
-import           GHCJS.DOM.Types            (MonadJSM)
 import           Reflex.Dom
 
 import           Common.DiceSet
@@ -23,7 +22,7 @@ import           Obelisk.Generated.Static
 copyPasta
   :: forall t m js
   . ( DomBuilder t m, MonadSample t m, PerformEvent t m, HasDocument m
-    , Prerender js m, MonadJSM (Performable m)
+    , Prerender js m
     )
   => Bool
   -> Dynamic t Nat1

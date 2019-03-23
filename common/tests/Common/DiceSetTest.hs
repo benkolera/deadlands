@@ -45,5 +45,5 @@ test_toFgCode = testCase "toFgCode" $ for_
   , ((DiceSet D4 1 0, ExplodingSet)  , "/die 1d4!" )
   , ((DiceSet D4 1 2, ExplodingSet)  , "/die 1d4+2!" )
   , ((DiceSet D10 1 0, SetVsTn (TnCheck 7 True))  , "/die 1d10!kt7s5")
-  , ((DiceSet D10 1 2, SetVsTn (TnCheck 7 True))  , "/die 1d10!kt5s5")
+  , ((DiceSet D10 1 2, SetVsTn (TnCheck 7 True))  , "/die 1d10+2!kt7s5")
   ] $ \ ((ds, t), o) -> toFgCode t ds @?= o

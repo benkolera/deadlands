@@ -34,7 +34,7 @@ style = do
       ]
 
   let headerFont = fontFamily ["Durango"] []
-  let bodyFont   = fontFamily ["SecretST"] [monospace]
+  let bodyFont   = fontFamily [] [monospace]
 
   fold1 (h1 :| [h2,h3,h4]) ? do
     headerFont

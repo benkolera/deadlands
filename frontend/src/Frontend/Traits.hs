@@ -180,6 +180,7 @@ traits traitsDyn = do
     trait traitsDyn "Cognition" traitsCognition $
       [ pureAptitude "Search" cognitionSearch
       , pureAptitude "Scruitinize" cognitionScruitinize
+      , pureAptitude "Trackin" cognitionTrackin
       ]
     trait traitsDyn "Knowledge" traitsKnowledge $
       [ pureAptitude "Occult" knowledgeOccult

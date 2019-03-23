@@ -65,7 +65,7 @@ toFgCode (SetVsTn (TnCheck tn s)) ds = fold
   -- the dice code so we can't just use show. Which is annoying because it is
   -- different if we have a tn or not. This is really a FG bug but we go
   -- deal with it mostly here.
-  [ "\\die "
+  [ "/die "
   , (ds ^. diceSetNum . to show . from _Text)
   , (ds ^. diceSetSides . to show . from _Text)
   , "!"
@@ -77,4 +77,4 @@ toFgCode StandardSet  ds = ds ^. to show . from _Text . to dieCode
 toFgCode ExplodingSet ds = ds ^. to show . from _Text . to dieCode . to (<> "!")
 
 dieCode :: Text -> Text
-dieCode = ("\\die " <>)
+dieCode = ("/die " <>)

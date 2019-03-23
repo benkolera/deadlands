@@ -27,6 +27,7 @@ library
     Frontend
   other-modules:
       Frontend.CopyPasta
+    , Frontend.CombatTracker
     , Frontend.Internal
     , Frontend.Spells
     , Frontend.Style

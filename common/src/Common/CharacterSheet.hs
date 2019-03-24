@@ -82,6 +82,7 @@ data NimblenessAptitudes l = NimblenessAptitudes
   , _nimblenessClimbin    :: l
   , _nimblenessDodge      :: l
   , _nimblenessHorseRidin :: l
+  , _nimblenessSneak      :: l
   } deriving (Eq, Show, Functor)
 makeLenses ''NimblenessAptitudes
 
@@ -447,6 +448,7 @@ gabriela = CharacterSheet
           , _nimblenessClimbin    = 1
           , _nimblenessHorseRidin = 1
           , _nimblenessDodge      = 0
+          , _nimblenessSneak      = 1
           }
         , _traitsQuickness = Trait (DiceSet D10 3 0) $ QuicknessAptitudes
           { _quicknessQuickLoad = Concentration 1 $ QuickLoadConcentrations

@@ -70,7 +70,7 @@ frontend = Frontend
           blank
         effectsEffectsE <- elClass "div" "effects" $ do
           info bgDyn
-          (_,combatEffectsE) <- runEventWriterT $ combatTracker
+          (_,combatEffectsE) <- runEventWriterT combatTracker
           healthEffectsE <- fmap (overEndo chrBgHealth) <$> wounds
             (fget chrStatsSize statsDyn)
             (maxWind <$> statsDyn)
@@ -83,7 +83,7 @@ frontend = Frontend
           void $ edges (fget chrBgEdges bgDyn)
           void $ hinderances (fget chrBgHinderances bgDyn)
           void $ knacks (fget chrBgKnacks bgDyn)
-          pure $ blessChangeEv
+          pure blessChangeEv
         pure $ effectsEffectsE <> spellEffectsEv
       pure ()
   }

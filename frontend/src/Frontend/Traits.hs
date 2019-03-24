@@ -164,6 +164,7 @@ traits traitsDyn = do
       , pureAptitude "Climbin" nimblenessClimbin
       , pureAptitude "Dodge" nimblenessDodge
       , pureAptitude "Horse Ridin'" nimblenessHorseRidin
+      , pureAptitude "Sneak" nimblenessSneak
       ]
     trait traitsDyn "Quickness" traitsQuickness $
       [ concentration "Quick Load" quicknessQuickLoad

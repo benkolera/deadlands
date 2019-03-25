@@ -5,8 +5,6 @@
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE RecursiveDo           #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TemplateHaskell       #-}
-{-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 module Frontend.Spells where
 
@@ -179,12 +177,12 @@ knacksMap = Map.fromList . fmap knackMeta . DMap.toList
         , "Legend: When a tainted supernatural spell or power affects your character, spend a Legend chip to make him immune to all the powers of the creature who cast it for the rest of the scene. A vampire could not charm the hero, for instance, but it could still bite her on the neck since that isn’t a supernatural power."
         ]
 
-toEffectTuple :: Text -> (EffectMetaMetaValue k) -> Text -> [Text] -> (EffectName, EffectMeta k)
+toEffectTuple :: Text -> EffectMetaMetaValue k -> Text -> [Text] -> (EffectName, EffectMeta k)
 toEffectTuple t emv sd ls = (EffectName t, EffectMeta sd ls emv)
 
 blessings
   :: ( MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
-     , Prerender js m, HasDocument m, PerformEvent t m
+     , Prerender js m, PerformEvent t m
      )
   => Dynamic t (Traits DiceSet)
   -> Dynamic t BlessingsMap
@@ -193,7 +191,7 @@ blessings tsDyn = effectsSection "Blessings" . liftA2 blessingsMap tsDyn
 
 edges
   :: ( MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
-     , Prerender js m, HasDocument m, PerformEvent t m
+     , Prerender js m, PerformEvent t m
      )
   => Dynamic t EdgesMap
   -> m (Event t (Endo EdgesMap))
@@ -201,7 +199,7 @@ edges = effectsSection "Edges" . fmap edgesMap
 
 hinderances
   :: ( MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
-     , Prerender js m, HasDocument m, PerformEvent t m
+     , Prerender js m, PerformEvent t m
      )
   => Dynamic t HinderancesMap
   -> m (Event t (Endo HinderancesMap))
@@ -209,7 +207,7 @@ hinderances = effectsSection "Hinderances" . fmap hinderancesMap
 
 knacks
   :: ( MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
-     , Prerender js m, HasDocument m, PerformEvent t m
+     , Prerender js m, PerformEvent t m
      )
   => Dynamic t KnacksMap
   -> m (Event t (Endo KnacksMap))
@@ -218,7 +216,7 @@ knacks = effectsSection "Knacks" . fmap knacksMap
 effectsSection
   :: forall t m js k
   .  ( DomBuilder t m, PostBuild t m, MonadHold t m, MonadFix m
-     , Prerender js m, HasDocument m, PerformEvent t m
+     , Prerender js m, PerformEvent t m
      )
   => Text
   -> Dynamic t (Map EffectName (EffectMeta k))
@@ -230,9 +228,9 @@ effectsSection title eMapDyn = elClass "div" "effects-section" $ do
       elClass "span" "name" . text . unEffectName $ k
       text ": "
       elClass "span" "short-desc" . dynText . fget effectMetaDesc $ emDyn
-      void . dyn $ (fget effectMetaLongDesc emDyn) <&> (traverse_ longDesc . nonEmpty)
+      void . dyn $ fget effectMetaLongDesc emDyn <&> (traverse_ longDesc . nonEmpty)
     elClass "div" "effect-form" $ do
-      editEv <- dyn $ (fget effectMetaMetaVal emDyn) <&> effectInput
+      editEv <- dyn $ fget effectMetaMetaVal emDyn <&> effectInput
       switchHold never editEv
   pure $ switchDyn (leftmost . toList <$> listEvs)
   where
@@ -240,7 +238,7 @@ effectsSection title eMapDyn = elClass "div" "effects-section" $ do
     effectInput (AptitudeCheckEffect tn rnds ds abMay mkEndo) = do
       copyPasta False (constDyn tn) (constDyn ds)
       effectValI <- inputElement $ (def :: InputElementConfig EventResult t (DomBuilderSpace m))
-        & inputElementConfig_initialValue .~ (maybe "" (^.activeBonusValue.to showText) abMay)
+        & inputElementConfig_initialValue .~ maybe "" (^.activeBonusValue.to showText) abMay
         & inputElementConfig_elementConfig .~ (def
           & elementConfig_initialAttributes .~
             (Map.fromList [("type", "number"),("min","1")]
@@ -248,12 +246,12 @@ effectsSection title eMapDyn = elClass "div" "effects-section" $ do
 
           )
       let newEffect = getCompose $ ActiveBonus rnds
-            <$> (readText <<$>> (_inputElement_value effectValI))
+            <$> readText <<$>> _inputElement_value effectValI
       buttClick <- button $ maybe "Activate" (const "Deactivate") abMay
       traverse_
         (elClass "span" "active-rounds" . text . roundsRemainingText . view activeBonusRoundsLeft)
         abMay
-      pure $ mkEndo <$> (maybe (current newEffect) (const $ pure Nothing) abMay) <@ buttClick
+      pure $ mkEndo <$> maybe (current newEffect) (const $ pure Nothing) abMay <@ buttClick
 
     roundsRemainingText 1 = "Active for 1 round"
     roundsRemainingText n = "Active for " <> showText n <> " rounds"

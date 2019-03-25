@@ -29,14 +29,13 @@ import           Obelisk.Generated.Static
 
 traitName
   :: (MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
-     , Prerender js m, PerformEvent t m, HasDocument m
+     , Prerender js m, PerformEvent t m
      )
   => T.Text
   -> Dynamic t DiceSet
   -> m ()
 traitName n dsDyn = do
-  elClass "span" "trait-name" $ do
-    text n
+  elClass "span" "trait-name" $ text n
   elClass "span" "trait-dice" $ do
     display dsDyn
     diceCodeRoller dsDyn True
@@ -48,7 +47,7 @@ concentration
   -> [Dynamic t (Concentration b DiceSet) -> m ()]
   -> Dynamic t (Trait a DiceSet)
   -> m ()
-concentration cn getter childLis tDyn = do
+concentration cn getter childLis tDyn = 
   el "li" $ do
     text cn
     elClass "ul" "concentration" $ do
@@ -58,25 +57,25 @@ concentration cn getter childLis tDyn = do
 diceCodeRoller
   :: forall t m js
   .  ( MonadFix m, MonadHold t m, DomBuilder t m, PostBuild t m
-     , PerformEvent t m, HasDocument m
+     , PerformEvent t m
      , Prerender js m
      )
   => Dynamic t DiceSet
   -> Bool
   -> m ()
-diceCodeRoller tdsDyn forTrait = do
+diceCodeRoller tdsDyn forTrait = 
   elClass "div" "dicecode-container" $ mdo
     (imgElt,_) <- elAttr' "img" (Map.fromList [("src",static @"dice.svg"),("class","dice-icon")]) blank
     let openE = True <$ domEvent Click imgElt
-    modalOpenedDyn <- foldDyn const False (leftmost [openE, (False <$ closeE)])
-    closeE <- elDynClass "div" (bool "modal" "modal opened" <$> modalOpenedDyn) $ do
+    modalOpenedDyn <- foldDyn const False (leftmost [openE, False <$ closeE])
+    closeE <- elDynClass "div" (bool "modal" "modal opened" <$> modalOpenedDyn) $
       elClass "div" "modal-content" $ do
         tn <- el "label" $ do
           text "TN:"
           inputElement $ (def :: InputElementConfig EventResult t (DomBuilderSpace m))
             & inputElementConfig_initialValue .~ "5"
             & inputElementConfig_elementConfig.elementConfig_initialAttributes .~
-              (Map.fromList [("min","1"),("class","tn-input"),("type","number")])
+              Map.fromList [("min","1"),("class","tn-input"),("type","number")]
         let tnDyn = fromMaybe 0 . readMay . T.unpack <$> (tn^.to _inputElement_value)
         elClass "ul" "dice-codes" $ do
           when forTrait . el "li" $ copyPastaWithLabel "Untrained" tnDyn tdsDyn
@@ -91,7 +90,7 @@ diceCodeRoller tdsDyn forTrait = do
 aptitude
   :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m
      , PerformEvent t m, Prerender js m
-     , HasDocument m)
+     )
   => T.Text
   -> Dynamic t DiceSet
   -> m ()
@@ -103,7 +102,7 @@ aptitude aName dsDyn = elClass "li" "aptitude" $ do
 concentrationAptitude
   :: (MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
      , Prerender js m
-     , PerformEvent t m, HasDocument m)
+     , PerformEvent t m)
   => T.Text
   -> Getter a Bool
   -> Dynamic t (Concentration a DiceSet)
@@ -119,7 +118,7 @@ concentrationAptitude label g cDyn = do
 pureAptitude
   :: (MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
      , Prerender js m
-     , PerformEvent t m, HasDocument m)
+     , PerformEvent t m)
   => T.Text
   -> Getter (a DiceSet) DiceSet
   -> Dynamic t (Trait a DiceSet)
@@ -130,7 +129,7 @@ pureAptitude name getter tDyn =
 trait
   :: (MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
      , Prerender js m, PerformEvent t m
-     , HasDocument m)
+     )
   => Dynamic t s
   -> T.Text
   -> Getter s (Trait a DiceSet)
@@ -145,19 +144,18 @@ trait traitsDyn tLabel tGetter aptitudes =
 traits
   :: ( MonadHold t m, MonadFix m, PostBuild t m, DomBuilder t m
      , Prerender js m, PerformEvent t m
-     , HasDocument m
      )
   => Dynamic t (Traits DiceSet)
   -> m ()
 traits traitsDyn = do
   el "h1" $ text "Traits"
   el "ul" $ do
-    trait traitsDyn "Deftness" traitsDeftness $
+    trait traitsDyn "Deftness" traitsDeftness
       [ concentration "Shootin" deftnessShootin
         [ concentrationAptitude "Shotgun" shootinShotgun
         ]
       ]
-    trait traitsDyn "Nimbleness" traitsNimbleness $
+    trait traitsDyn "Nimbleness" traitsNimbleness
       [ concentration "Fightin" nimblenessFightin
         [ concentrationAptitude "Brawlin" fightinBrawlin
         ]
@@ -166,7 +164,7 @@ traits traitsDyn = do
       , pureAptitude "Horse Ridin'" nimblenessHorseRidin
       , pureAptitude "Sneak" nimblenessSneak
       ]
-    trait traitsDyn "Quickness" traitsQuickness $
+    trait traitsDyn "Quickness" traitsQuickness
       [ concentration "Quick Load" quicknessQuickLoad
         [ concentrationAptitude "Shotgun" quickLoadShotgun
         ]
@@ -174,16 +172,16 @@ traits traitsDyn = do
         [ concentrationAptitude "Shotgun" quickDrawShotgun
         ]
       ]
-    trait traitsDyn "Strength" traitsStrength $
+    trait traitsDyn "Strength" traitsStrength 
       []
-    trait traitsDyn "Vigor" traitsVigor $
+    trait traitsDyn "Vigor" traitsVigor 
       []
-    trait traitsDyn "Cognition" traitsCognition $
+    trait traitsDyn "Cognition" traitsCognition 
       [ pureAptitude "Search" cognitionSearch
       , pureAptitude "Scruitinize" cognitionScruitinize
       , pureAptitude "Trackin" cognitionTrackin
       ]
-    trait traitsDyn "Knowledge" traitsKnowledge $
+    trait traitsDyn "Knowledge" traitsKnowledge 
       [ pureAptitude "Occult" knowledgeOccult
       , pureAptitude "Theology" knowledgeTheology
       , pureAptitude "Latin" knowledgeLatin
@@ -191,13 +189,13 @@ traits traitsDyn = do
       , pureAptitude "Spanish" knowledgeSpanish
       , pureAptitude "Area: Chihuahua" knowledgeChihuahua
       ]
-    trait traitsDyn "Mien" traitsMien $
+    trait traitsDyn "Mien" traitsMien 
       [ pureAptitude "Overawe" mienOverawe
       ]
-    trait traitsDyn "Smarts" traitsSmarts $
+    trait traitsDyn "Smarts" traitsSmarts 
       [ pureAptitude "Streetwise" smartsStreetwise
       ]
-    trait traitsDyn "Spirit" traitsSpirit $
+    trait traitsDyn "Spirit" traitsSpirit
       [ pureAptitude "Faith" spiritFaith
       , pureAptitude "Guts" spiritGuts
       ]
